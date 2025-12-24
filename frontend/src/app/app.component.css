@@ -77,6 +77,17 @@
   font-weight: 500;
 }
 
+.user-badge {
+  display: inline-block;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-weight: 500;
+}
+
 .btn-logout {
   background: rgba(255, 255, 255, 0.2);
   color: white;
