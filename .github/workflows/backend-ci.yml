@@ -1,0 +1,37 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore backend
+
+    - name: Build
+      run: dotnet build backend --no-restore --configuration Release
+
+    - name: Run tests
+      run: dotnet test backend/VacationManager.Tests --no-build --verbosity normal --configuration Release
+
+    - name: Code analysis
+      run: dotnet format --verify-no-changes backend
+      continue-on-error: true
