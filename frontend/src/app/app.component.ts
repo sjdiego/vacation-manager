@@ -4,6 +4,8 @@ import { RouterModule, Router } from '@angular/router';
 import { AuthService, User } from '@app/core/services/auth.service';
 import { ToastService } from '@app/core/services/toast.service';
 
+const BUILD_TIMESTAMP = new Date().toISOString();
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -19,7 +21,9 @@ export class AppComponent implements OnInit {
     private authService: AuthService,
     private toastService: ToastService,
     private router: Router
-  ) {}
+  ) {
+    console.log('App built at:', BUILD_TIMESTAMP);
+  }
 
   ngOnInit(): void {
     // Restore user state on init
