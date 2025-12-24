@@ -1,0 +1,9 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*", "/css/*", "/js/*", "*.json", "*.ico"]
+  },
+  "mobileApiLocation": "api",
+  "apiLocation": "api",
+  "outputLocation": "dist/vacation-manager-frontend"
+}
