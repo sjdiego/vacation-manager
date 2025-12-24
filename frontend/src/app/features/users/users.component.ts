@@ -19,7 +19,10 @@ export class UsersComponent implements OnInit {
   searchTerm = '';
   filterTeamId = '';
   selectedUser: UserDto | null = null;
+  selectedTeamIdForUser = '';
   isLoading = true;
+  currentUser: UserDto | null = null;
+  isAssigning = false;
 
   constructor(
     private userService: UserService,
@@ -29,8 +32,20 @@ export class UsersComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadCurrentUser();
     this.loadUsers();
     this.loadTeams();
+  }
+
+  loadCurrentUser(): void {
+    this.userService.getCurrentUser().subscribe({
+      next: (user) => {
+        this.currentUser = user;
+      },
+      error: (error) => {
+        console.error('Failed to load current user:', error);
+      }
+    });
   }
 
   loadUsers(): void {
@@ -85,9 +100,54 @@ export class UsersComponent implements OnInit {
 
   viewUser(user: UserDto): void {
     this.selectedUser = user;
+    this.selectedTeamIdForUser = user.teamId || '';
   }
 
   closeModal(): void {
     this.selectedUser = null;
+    this.selectedTeamIdForUser = '';
+  }
+
+  assignUserToTeam(): void {
+    if (!this.selectedUser || !this.selectedTeamIdForUser) {
+      this.toastService.error('Please select a team');
+      return;
+    }
+
+    this.isAssigning = true;
+    this.userService.assignUserToTeam(this.selectedUser.id, this.selectedTeamIdForUser).subscribe({
+      next: () => {
+        this.toastService.success(`User assigned to ${this.getTeamName(this.selectedTeamIdForUser)}`);
+        this.loadUsers();
+        this.closeModal();
+        this.isAssigning = false;
+      },
+      error: (error) => {
+        this.toastService.error(error.message || 'Failed to assign user to team');
+        this.isAssigning = false;
+      }
+    });
+  }
+
+  removeUserFromTeam(): void {
+    if (!this.selectedUser) return;
+
+    if (!confirm(`Remove ${this.selectedUser.displayName} from team?`)) {
+      return;
+    }
+
+    this.isAssigning = true;
+    this.userService.removeUserFromTeamAsManager(this.selectedUser.id).subscribe({
+      next: () => {
+        this.toastService.success('User removed from team');
+        this.loadUsers();
+        this.closeModal();
+        this.isAssigning = false;
+      },
+      error: (error) => {
+        this.toastService.error(error.message || 'Failed to remove user from team');
+        this.isAssigning = false;
+      }
+    });
   }
 }

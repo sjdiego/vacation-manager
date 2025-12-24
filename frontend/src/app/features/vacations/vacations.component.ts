@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { VacationService, VacationDto, CreateVacationDto, UpdateVacationDto, VacationType, VacationStatus } from '@app/core/services';
+import { UserService } from '@app/core/services/user.service';
 import { ToastService } from '@app/core/services/toast.service';
 
 @Component({
@@ -17,12 +18,14 @@ export class VacationsComponent implements OnInit {
   showModal = false;
   editingVacation: VacationDto | null = null;
   isLoading = true;
+  canCreateVacation = false;
   
   VacationType = VacationType;
   VacationStatus = VacationStatus;
 
   constructor(
     private vacationService: VacationService,
+    private userService: UserService,
     private toastService: ToastService,
     private fb: FormBuilder
   ) {
@@ -36,6 +39,11 @@ export class VacationsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadVacations();
+    this.checkUserPermissions();
+  }
+
+  checkUserPermissions(): void {
+    this.canCreateVacation = this.userService.isUserInTeam();
   }
 
   loadVacations(): void {

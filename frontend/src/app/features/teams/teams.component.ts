@@ -14,11 +14,14 @@ import { ToastService } from '@app/core/services/toast.service';
 export class TeamsComponent implements OnInit {
   teams: TeamDto[] = [];
   teamMembers: UserDto[] = [];
+  allUsers: UserDto[] = [];
   teamForm: FormGroup;
   showModal = false;
   selectedTeam: TeamDto | null = null;
   editingTeam: TeamDto | null = null;
   isLoading = true;
+  selectedUserToAdd = '';
+  isAddingMember = false;
 
   constructor(
     private teamService: TeamService,
@@ -34,6 +37,7 @@ export class TeamsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTeams();
+    this.loadAllUsers();
   }
 
   loadTeams(): void {
@@ -46,6 +50,17 @@ export class TeamsComponent implements OnInit {
       error: (error) => {
         this.toastService.error(error.message || 'Failed to load teams');
         this.isLoading = false;
+      }
+    });
+  }
+
+  loadAllUsers(): void {
+    this.userService.getAllUsers().subscribe({
+      next: (users) => {
+        this.allUsers = users;
+      },
+      error: () => {
+        // Silently fail, this is optional
       }
     });
   }
@@ -131,6 +146,7 @@ export class TeamsComponent implements OnInit {
 
   viewTeamDetails(team: TeamDto): void {
     this.selectedTeam = team;
+    this.selectedUserToAdd = '';
     this.loadTeamMembers(team.id);
   }
 
@@ -148,5 +164,49 @@ export class TeamsComponent implements OnInit {
   closeDetailsModal(): void {
     this.selectedTeam = null;
     this.teamMembers = [];
+    this.selectedUserToAdd = '';
+  }
+
+  getAvailableUsersForTeam(): UserDto[] {
+    if (!this.selectedTeam) return [];
+    return this.allUsers.filter(user => user.teamId !== this.selectedTeam?.id);
+  }
+
+  addMemberToTeam(): void {
+    if (!this.selectedTeam || !this.selectedUserToAdd) {
+      this.toastService.error('Please select a user');
+      return;
+    }
+
+    this.isAddingMember = true;
+    this.userService.assignUserToTeam(this.selectedUserToAdd, this.selectedTeam.id).subscribe({
+      next: () => {
+        this.toastService.success('Member added to team');
+        this.loadTeamMembers(this.selectedTeam!.id);
+        this.selectedUserToAdd = '';
+        this.isAddingMember = false;
+      },
+      error: (error) => {
+        this.toastService.error(error.message || 'Failed to add member');
+        this.isAddingMember = false;
+      }
+    });
+  }
+
+  removeMemberFromTeam(memberId: string): void {
+    const member = this.teamMembers.find(m => m.id === memberId);
+    if (!member || !confirm(`Remove ${member.displayName} from team?`)) {
+      return;
+    }
+
+    this.userService.removeUserFromTeamAsManager(memberId).subscribe({
+      next: () => {
+        this.toastService.success('Member removed from team');
+        this.loadTeamMembers(this.selectedTeam!.id);
+      },
+      error: (error) => {
+        this.toastService.error(error.message || 'Failed to remove member');
+      }
+    });
   }
 }

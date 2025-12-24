@@ -111,6 +111,9 @@ public class VacationsController : ControllerBase
         if (user == null)
             return NotFound("User not found");
 
+        if (user.TeamId == null)
+            return BadRequest("User must be part of a team to request vacation");
+
         var userVacations = await _vacationRepository.GetByUserIdAsync(user.Id);
         var hasOverlap = userVacations.Any(v => 
             v.Status == VacationStatus.Approved && 

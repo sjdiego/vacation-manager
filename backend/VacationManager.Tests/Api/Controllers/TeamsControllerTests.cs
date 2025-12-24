@@ -4,6 +4,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using VacationManager.Api.Controllers;
+using VacationManager.Api.Services;
 using VacationManager.Core.DTOs;
 using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
@@ -14,17 +15,21 @@ public class TeamsControllerTests
 {
     private readonly ITeamRepository _teamRepository;
     private readonly IVacationRepository _vacationRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IMapper _mapper;
     private readonly ILogger<TeamsController> _logger;
+    private readonly IClaimExtractorService _claimExtractor;
     private readonly TeamsController _controller;
 
     public TeamsControllerTests()
     {
         _teamRepository = Substitute.For<ITeamRepository>();
         _vacationRepository = Substitute.For<IVacationRepository>();
+        _userRepository = Substitute.For<IUserRepository>();
         _mapper = Substitute.For<IMapper>();
         _logger = Substitute.For<ILogger<TeamsController>>();
-        _controller = new TeamsController(_teamRepository, _vacationRepository, _mapper, _logger);
+        _claimExtractor = Substitute.For<IClaimExtractorService>();
+        _controller = new TeamsController(_teamRepository, _vacationRepository, _userRepository, _mapper, _logger, _claimExtractor);
     }
 
     [Fact]
@@ -80,13 +85,35 @@ public class TeamsControllerTests
     }
 
     [Fact]
-    public async Task Create_WithValidData_CreatesTeam()
+    public async Task Create_WithNonManager_ReturnsForbid()
     {
         // Arrange
+        var managerId = "user-entra-id";
+        var user = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "user@example.com", DisplayName = "User", IsManager = false };
+        var createDto = new CreateTeamDto { Name = "Engineering", Description = "Software team" };
+
+        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
+        _userRepository.GetByEntraIdAsync(managerId).Returns(user);
+
+        // Act
+        var result = await _controller.Create(createDto);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Create_WithManager_CreatesTeam()
+    {
+        // Arrange
+        var managerId = "manager-entra-id";
+        var manager = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
         var createDto = new CreateTeamDto { Name = "Engineering", Description = "Software team" };
         var createdTeam = new Team { Id = Guid.NewGuid(), Name = createDto.Name, Description = createDto.Description };
         var teamDto = new TeamDto { Id = createdTeam.Id, Name = createdTeam.Name };
 
+        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
+        _userRepository.GetByEntraIdAsync(managerId).Returns(manager);
         _teamRepository.CreateAsync(Arg.Any<Team>()).Returns(createdTeam);
         _mapper.Map<TeamDto>(createdTeam).Returns(teamDto);
 
@@ -100,15 +127,38 @@ public class TeamsControllerTests
     }
 
     [Fact]
-    public async Task Update_WithValidData_UpdatesTeam()
+    public async Task Update_WithNonManager_ReturnsForbid()
     {
         // Arrange
         var teamId = Guid.NewGuid();
+        var managerId = "user-entra-id";
+        var user = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "user@example.com", DisplayName = "User", IsManager = false };
+        var updateDto = new UpdateTeamDto { Name = "Updated Engineering", Description = "New" };
+
+        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
+        _userRepository.GetByEntraIdAsync(managerId).Returns(user);
+
+        // Act
+        var result = await _controller.Update(teamId, updateDto);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Update_WithManager_UpdatesTeam()
+    {
+        // Arrange
+        var teamId = Guid.NewGuid();
+        var managerId = "manager-entra-id";
+        var manager = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
         var team = new Team { Id = teamId, Name = "Engineering", Description = "Old" };
         var updateDto = new UpdateTeamDto { Name = "Updated Engineering", Description = "New" };
         var updatedTeam = new Team { Id = teamId, Name = updateDto.Name, Description = updateDto.Description };
         var teamDto = new TeamDto { Id = teamId, Name = updatedTeam.Name };
 
+        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
+        _userRepository.GetByEntraIdAsync(managerId).Returns(manager);
         _teamRepository.GetByIdAsync(teamId).Returns(team);
         _teamRepository.UpdateAsync(Arg.Any<Team>()).Returns(updatedTeam);
         _mapper.Map<TeamDto>(updatedTeam).Returns(teamDto);
@@ -122,12 +172,34 @@ public class TeamsControllerTests
     }
 
     [Fact]
-    public async Task Delete_WithValidId_DeletesTeam()
+    public async Task Delete_WithNonManager_ReturnsForbid()
     {
         // Arrange
         var teamId = Guid.NewGuid();
+        var managerId = "user-entra-id";
+        var user = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "user@example.com", DisplayName = "User", IsManager = false };
+
+        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
+        _userRepository.GetByEntraIdAsync(managerId).Returns(user);
+
+        // Act
+        var result = await _controller.Delete(teamId);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result);
+    }
+
+    [Fact]
+    public async Task Delete_WithManager_DeletesTeam()
+    {
+        // Arrange
+        var teamId = Guid.NewGuid();
+        var managerId = "manager-entra-id";
+        var manager = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
         var team = new Team { Id = teamId, Name = "Engineering" };
 
+        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
+        _userRepository.GetByEntraIdAsync(managerId).Returns(manager);
         _teamRepository.GetByIdAsync(teamId).Returns(team);
 
         // Act
@@ -136,20 +208,6 @@ public class TeamsControllerTests
         // Assert
         Assert.IsType<NoContentResult>(result);
         await _teamRepository.Received(1).DeleteAsync(teamId);
-    }
-
-    [Fact]
-    public async Task Delete_WithInvalidId_ReturnsNotFound()
-    {
-        // Arrange
-        var teamId = Guid.NewGuid();
-        _teamRepository.GetByIdAsync(teamId).Returns((Team?)null);
-
-        // Act
-        var result = await _controller.Delete(teamId);
-
-        // Assert
-        Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]

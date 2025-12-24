@@ -1,7 +1,11 @@
 <div class="vacations-container">
   <div class="vacations-header">
     <h2>My Vacations</h2>
-    <button class="btn btn-primary" (click)="openCreateModal()">+ Request Vacation</button>
+    <button class="btn btn-primary" (click)="openCreateModal()" [disabled]="!canCreateVacation" [title]="!canCreateVacation ? 'You must be part of a team to request vacation' : ''">+ Request Vacation</button>
+  </div>
+
+  <div *ngIf="!canCreateVacation" class="warning-banner">
+    ⚠️ You must be assigned to a team to request vacation.
   </div>
 
   <div *ngIf="isLoading" class="loading">

@@ -62,9 +62,28 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task GetAll_ReturnsAllUsers()
+    public async Task GetAll_WithNonManager_ReturnsForbid()
     {
         // Arrange
+        var entraId = "user-entra-id";
+        var user = new User { Id = Guid.NewGuid(), EntraId = entraId, Email = "user@example.com", DisplayName = "User", IsManager = false };
+
+        _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
+        _userRepository.GetByEntraIdAsync(entraId).Returns(user);
+
+        // Act
+        var result = await _controller.GetAll();
+
+        // Assert
+        Assert.IsType<ForbidResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetAll_WithManager_ReturnsAllUsers()
+    {
+        // Arrange
+        var entraId = "manager-entra-id";
+        var manager = new User { Id = Guid.NewGuid(), EntraId = entraId, Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
         var users = new List<User>
         {
             new User { Id = Guid.NewGuid(), EntraId = "entra-1", Email = "user1@example.com", DisplayName = "User 1" },
@@ -72,6 +91,8 @@ public class UsersControllerTests
         };
         var userDtos = new List<UserDto> { new UserDto(), new UserDto() };
 
+        _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
+        _userRepository.GetByEntraIdAsync(entraId).Returns(manager);
         _userRepository.GetAllAsync().Returns(users);
         _mapper.Map<List<UserDto>>(users).Returns(userDtos);
 
@@ -105,7 +126,7 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task Register_WithNewUser_CreatesUser()
+    public async Task GetMe_WithNewUser_AutoRegistersAndReturnsUser()
     {
         // Arrange
         var entraId = "new-user-entra-id";
@@ -122,12 +143,31 @@ public class UsersControllerTests
         _mapper.Map<UserDto>(createdUser).Returns(userDto);
 
         // Act
-        var result = await _controller.Register();
+        var result = await _controller.GetMe();
 
         // Assert
-        var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-        Assert.Equal(nameof(UsersController.GetById), createdResult.ActionName);
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.IsType<UserDto>(okResult.Value);
         await _userRepository.Received(1).CreateAsync(Arg.Any<User>());
+    }
+
+    [Fact]
+    public async Task GetMe_WithNewUserMissingClaims_ReturnsNotFound()
+    {
+        // Arrange
+        var entraId = "new-user-entra-id";
+
+        _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
+        _userRepository.GetByEntraIdAsync(entraId).Returns((User?)null);
+        _claimExtractor.GetEmail(_controller.User).Returns(string.Empty);
+        _claimExtractor.GetName(_controller.User).Returns(string.Empty);
+
+        // Act
+        var result = await _controller.GetMe();
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result.Result);
+        await _userRepository.DidNotReceive().CreateAsync(Arg.Any<User>());
     }
 
     [Fact]
@@ -155,13 +195,35 @@ public class UsersControllerTests
     }
 
     [Fact]
+    public async Task GetByTeam_WithUserNotInTeam_ReturnsForbid()
+    {
+        // Arrange
+        var entraId = "user-entra-id";
+        var teamId = Guid.NewGuid();
+        var user = new User { Id = Guid.NewGuid(), EntraId = entraId, Email = "user@example.com", DisplayName = "User", TeamId = null, IsManager = false };
+
+        _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
+        _userRepository.GetByEntraIdAsync(entraId).Returns(user);
+
+        // Act
+        var result = await _controller.GetByTeam(teamId);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result.Result);
+    }
+
+    [Fact]
     public async Task GetByTeam_WithValidTeamId_ReturnsTeamMembers()
     {
         // Arrange
+        var entraId = "user-entra-id";
         var teamId = Guid.NewGuid();
+        var user = new User { Id = Guid.NewGuid(), EntraId = entraId, Email = "user@example.com", DisplayName = "User", TeamId = teamId, IsManager = false };
         var users = new List<User> { new User { Id = Guid.NewGuid(), EntraId = "entra-1", Email = "user1@example.com", DisplayName = "User 1", TeamId = teamId } };
         var userDtos = new List<UserDto> { new UserDto() };
 
+        _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
+        _userRepository.GetByEntraIdAsync(entraId).Returns(user);
         _userRepository.GetByTeamAsync(teamId).Returns(users);
         _mapper.Map<List<UserDto>>(users).Returns(userDtos);
 
@@ -171,5 +233,94 @@ public class UsersControllerTests
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         Assert.NotNull(okResult.Value);
+    }
+
+    [Fact]
+    public async Task AssignUserToTeam_WithNonManager_ReturnsForbid()
+    {
+        // Arrange
+        var managerId = "manager-entra-id";
+        var userId = Guid.NewGuid();
+        var teamId = Guid.NewGuid();
+        var manager = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "user@example.com", DisplayName = "User", IsManager = false };
+
+        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
+        _userRepository.GetByEntraIdAsync(managerId).Returns(manager);
+
+        // Act
+        var result = await _controller.AssignUserToTeam(userId, teamId);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task AssignUserToTeam_WithManager_AssignsUserToTeam()
+    {
+        // Arrange
+        var managerId = "manager-entra-id";
+        var userId = Guid.NewGuid();
+        var teamId = Guid.NewGuid();
+        var manager = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
+        var user = new User { Id = userId, EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", TeamId = null };
+        var updatedUser = new User { Id = userId, EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", TeamId = teamId };
+        var userDto = new UserDto { Id = userId, TeamId = teamId };
+
+        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
+        _userRepository.GetByEntraIdAsync(managerId).Returns(manager);
+        _userRepository.GetByIdAsync(userId).Returns(user);
+        _userRepository.UpdateAsync(Arg.Any<User>()).Returns(updatedUser);
+        _mapper.Map<UserDto>(updatedUser).Returns(userDto);
+
+        // Act
+        var result = await _controller.AssignUserToTeam(userId, teamId);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        await _userRepository.Received(1).UpdateAsync(Arg.Any<User>());
+    }
+
+    [Fact]
+    public async Task RemoveUserFromTeam_WithNonManager_ReturnsForbid()
+    {
+        // Arrange
+        var managerId = "user-entra-id";
+        var userId = Guid.NewGuid();
+        var user = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "user@example.com", DisplayName = "User", IsManager = false };
+
+        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
+        _userRepository.GetByEntraIdAsync(managerId).Returns(user);
+
+        // Act
+        var result = await _controller.RemoveUserFromTeam(userId);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task RemoveUserFromTeam_WithManager_RemovesUserFromTeam()
+    {
+        // Arrange
+        var managerId = "manager-entra-id";
+        var userId = Guid.NewGuid();
+        var teamId = Guid.NewGuid();
+        var manager = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
+        var user = new User { Id = userId, EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", TeamId = teamId };
+        var updatedUser = new User { Id = userId, EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", TeamId = null };
+        var userDto = new UserDto { Id = userId };
+
+        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
+        _userRepository.GetByEntraIdAsync(managerId).Returns(manager);
+        _userRepository.GetByIdAsync(userId).Returns(user);
+        _userRepository.UpdateAsync(Arg.Any<User>()).Returns(updatedUser);
+        _mapper.Map<UserDto>(updatedUser).Returns(userDto);
+
+        // Act
+        var result = await _controller.RemoveUserFromTeam(userId);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        await _userRepository.Received(1).UpdateAsync(Arg.Any<User>());
     }
 }

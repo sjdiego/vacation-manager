@@ -4,6 +4,7 @@ using AutoMapper;
 using VacationManager.Core.DTOs;
 using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
+using VacationManager.Api.Services;
 
 namespace VacationManager.Api.Controllers;
 
@@ -14,19 +15,25 @@ public class TeamsController : ControllerBase
 {
     private readonly ITeamRepository _teamRepository;
     private readonly IVacationRepository _vacationRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IMapper _mapper;
     private readonly ILogger<TeamsController> _logger;
+    private readonly IClaimExtractorService _claimExtractor;
 
     public TeamsController(
         ITeamRepository teamRepository,
         IVacationRepository vacationRepository,
+        IUserRepository userRepository,
         IMapper mapper,
-        ILogger<TeamsController> logger)
+        ILogger<TeamsController> logger,
+        IClaimExtractorService claimExtractor)
     {
         _teamRepository = teamRepository;
         _vacationRepository = vacationRepository;
+        _userRepository = userRepository;
         _mapper = mapper;
         _logger = logger;
+        _claimExtractor = claimExtractor;
     }
 
     [HttpGet]
@@ -71,6 +78,14 @@ public class TeamsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<TeamDto>> Create(CreateTeamDto dto)
     {
+        var userEntraId = _claimExtractor.GetEntraId(User);
+        if (string.IsNullOrEmpty(userEntraId))
+            return Unauthorized();
+
+        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
+        if (user == null || !user.IsManager)
+            return Forbid("Only managers can create teams");
+
         var team = new Team
         {
             Id = Guid.NewGuid(),
@@ -79,7 +94,7 @@ public class TeamsController : ControllerBase
         };
 
         var created = await _teamRepository.CreateAsync(team);
-        _logger.LogInformation("Team created: {TeamId}", created.Id);
+        _logger.LogInformation("Team created: {TeamId} by manager {UserId}", created.Id, user.Id);
 
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, _mapper.Map<TeamDto>(created));
     }
@@ -87,6 +102,14 @@ public class TeamsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<TeamDto>> Update(Guid id, UpdateTeamDto dto)
     {
+        var userEntraId = _claimExtractor.GetEntraId(User);
+        if (string.IsNullOrEmpty(userEntraId))
+            return Unauthorized();
+
+        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
+        if (user == null || !user.IsManager)
+            return Forbid("Only managers can update teams");
+
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)
             return NotFound();
@@ -105,12 +128,20 @@ public class TeamsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {
+        var userEntraId = _claimExtractor.GetEntraId(User);
+        if (string.IsNullOrEmpty(userEntraId))
+            return Unauthorized();
+
+        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
+        if (user == null || !user.IsManager)
+            return Forbid("Only managers can delete teams");
+
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)
             return NotFound();
 
         await _teamRepository.DeleteAsync(id);
-        _logger.LogInformation("Team deleted: {TeamId}", id);
+        _logger.LogInformation("Team deleted: {TeamId} by manager {UserId}", id, user.Id);
 
         return NoContent();
     }

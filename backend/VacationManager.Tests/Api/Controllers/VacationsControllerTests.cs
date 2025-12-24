@@ -107,12 +107,33 @@ public class VacationsControllerTests
     }
 
     [Fact]
-    public async Task Create_WithValidData_CreatesVacation()
+    public async Task Create_WithUserNotInTeam_ReturnsBadRequest()
     {
         // Arrange
         var userId = Guid.NewGuid();
         var entraId = "user-entra-id";
-        var user = new User { Id = userId, EntraId = entraId, Email = "user@example.com", DisplayName = "John Doe" };
+        var user = new User { Id = userId, EntraId = entraId, Email = "user@example.com", DisplayName = "John Doe", TeamId = null };
+        var createDto = new CreateVacationDto { StartDate = DateTime.UtcNow, EndDate = DateTime.UtcNow.AddDays(5), Type = VacationType.Vacation };
+
+        _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
+        _userRepository.GetByEntraIdAsync(entraId).Returns(user);
+
+        // Act
+        var result = await _controller.Create(createDto);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        await _vacationRepository.DidNotReceive().CreateAsync(Arg.Any<Vacation>());
+    }
+
+    [Fact]
+    public async Task Create_WithValidDataAndTeam_CreatesVacation()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var teamId = Guid.NewGuid();
+        var entraId = "user-entra-id";
+        var user = new User { Id = userId, EntraId = entraId, Email = "user@example.com", DisplayName = "John Doe", TeamId = teamId };
         var createDto = new CreateVacationDto { StartDate = DateTime.UtcNow, EndDate = DateTime.UtcNow.AddDays(5), Type = VacationType.Vacation };
         var createdVacation = new Vacation { Id = Guid.NewGuid(), UserId = userId, StartDate = createDto.StartDate, EndDate = createDto.EndDate, Type = createDto.Type, Status = VacationStatus.Pending };
         var vacationDto = new VacationDto { Id = createdVacation.Id };

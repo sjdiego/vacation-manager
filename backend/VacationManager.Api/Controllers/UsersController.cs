@@ -39,7 +39,29 @@ public class UsersController : ControllerBase
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
         if (user == null)
-            return NotFound();
+        {
+            var email = _claimExtractor.GetEmail(User);
+            var displayName = _claimExtractor.GetName(User);
+
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(displayName))
+            {
+                _logger.LogWarning("Cannot auto-register user {EntraId}: missing email or display name", userEntraId);
+                return NotFound();
+            }
+
+            user = new User
+            {
+                Id = Guid.NewGuid(),
+                EntraId = userEntraId,
+                Email = email,
+                DisplayName = displayName,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            user = await _userRepository.CreateAsync(user);
+            _logger.LogInformation("User auto-registered: {UserId} with EntraId: {EntraId} and email: {Email}", user.Id, userEntraId, email);
+        }
 
         return Ok(_mapper.Map<UserDto>(user));
     }
@@ -91,42 +113,6 @@ public class UsersController : ControllerBase
         return Ok(_mapper.Map<UserDto>(updated));
     }
 
-    [HttpPost("register")]
-    public async Task<ActionResult<UserDto>> Register()
-    {
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(userEntraId))
-            return Unauthorized(new { error = "objectidentifier claim not found" });
-
-        var existingUser = await _userRepository.GetByEntraIdAsync(userEntraId);
-        if (existingUser != null)
-            return BadRequest(new { error = "User already registered" });
-
-        var email = _claimExtractor.GetEmail(User);
-        var displayName = _claimExtractor.GetName(User);
-
-        if (string.IsNullOrEmpty(email))
-            return BadRequest(new { error = "Could not extract email from token" });
-
-        if (string.IsNullOrEmpty(displayName))
-            return BadRequest(new { error = "Could not extract display name from token" });
-
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            EntraId = userEntraId,
-            Email = email,
-            DisplayName = displayName,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        var created = await _userRepository.CreateAsync(user);
-        _logger.LogInformation("User auto-registered: {UserId} with EntraId: {EntraId} and email: {Email}", created.Id, userEntraId, email);
-
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, _mapper.Map<UserDto>(created));
-    }
-
     [HttpGet("{id}")]
     public async Task<ActionResult<UserDto>> GetById(Guid id)
     {
@@ -140,14 +126,87 @@ public class UsersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<UserDto>>> GetAll()
     {
+        var userEntraId = _claimExtractor.GetEntraId(User);
+        if (string.IsNullOrEmpty(userEntraId))
+            return Unauthorized();
+
+        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
+        if (user == null || !user.IsManager)
+            return Forbid("Only managers can view all users");
+
         var users = await _userRepository.GetAllAsync();
         return Ok(_mapper.Map<List<UserDto>>(users));
     }
 
-    [HttpGet("team/{teamId}")]
-    public async Task<ActionResult<IEnumerable<UserDto>>> GetByTeam(Guid teamId)
+    [HttpPut("{id}/team/{teamId}")]
+    public async Task<ActionResult<UserDto>> AssignUserToTeam(Guid id, Guid teamId)
     {
-        var users = await _userRepository.GetByTeamAsync(teamId);
-        return Ok(_mapper.Map<List<UserDto>>(users));
+        var managerEntraId = _claimExtractor.GetEntraId(User);
+        if (string.IsNullOrEmpty(managerEntraId))
+            return Unauthorized();
+
+        var manager = await _userRepository.GetByEntraIdAsync(managerEntraId);
+        if (manager == null || !manager.IsManager)
+            return Forbid("Only managers can assign users to teams");
+
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user == null)
+            return NotFound("User not found");
+
+        if (user.TeamId == teamId)
+            return BadRequest(new { error = "User is already member of this team" });
+
+        user.TeamId = teamId;
+        user.UpdatedAt = DateTime.UtcNow;
+        
+        var updated = await _userRepository.UpdateAsync(user);
+        _logger.LogInformation("User {UserId} assigned to team {TeamId} by manager {ManagerId}", user.Id, teamId, manager.Id);
+
+        return Ok(_mapper.Map<UserDto>(updated));
     }
-}
+
+    [HttpDelete("{id}/team")]
+    public async Task<ActionResult<UserDto>> RemoveUserFromTeam(Guid id)
+    {
+        var managerEntraId = _claimExtractor.GetEntraId(User);
+        if (string.IsNullOrEmpty(managerEntraId))
+            return Unauthorized();
+
+        var manager = await _userRepository.GetByEntraIdAsync(managerEntraId);
+        if (manager == null || !manager.IsManager)
+            return Forbid("Only managers can remove users from teams");
+
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user == null)
+            return NotFound("User not found");
+
+        if (user.TeamId == null)
+            return BadRequest(new { error = "User is not member of any team" });
+
+        var previousTeamId = user.TeamId;
+        user.TeamId = null;
+        user.UpdatedAt = DateTime.UtcNow;
+        
+        var updated = await _userRepository.UpdateAsync(user);
+        _logger.LogInformation("User {UserId} removed from team {TeamId} by manager {ManagerId}", user.Id, previousTeamId, manager.Id);
+
+        return Ok(_mapper.Map<UserDto>(updated));
+    }
+
+     [HttpGet("team/{teamId}")]
+     public async Task<ActionResult<IEnumerable<UserDto>>> GetByTeam(Guid teamId)
+     {
+         var userEntraId = _claimExtractor.GetEntraId(User);
+         if (string.IsNullOrEmpty(userEntraId))
+             return Unauthorized();
+
+         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
+         if (user == null || user.TeamId == null)
+             return Forbid("User must be part of a team");
+
+         if (user.TeamId != teamId && !user.IsManager)
+             return Forbid("Can only view users from your own team");
+
+         var users = await _userRepository.GetByTeamAsync(teamId);
+         return Ok(_mapper.Map<List<UserDto>>(users));
+     }}

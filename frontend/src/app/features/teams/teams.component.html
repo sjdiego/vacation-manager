@@ -102,15 +102,30 @@
 
         <div class="detail-section">
           <h4>Team Members</h4>
+          <div class="members-actions">
+            <select [(ngModel)]="selectedUserToAdd" class="user-select">
+              <option value="">-- Select user to add --</option>
+              <option *ngFor="let user of getAvailableUsersForTeam()" [value]="user.id">
+                {{ user.displayName }} ({{ user.email }})
+              </option>
+            </select>
+            <button class="btn btn-small btn-primary" (click)="addMemberToTeam()" [disabled]="!selectedUserToAdd || isAddingMember">
+              {{ isAddingMember ? 'Adding...' : '+ Add Member' }}
+            </button>
+          </div>
+
           <div *ngIf="teamMembers.length === 0" class="empty">
             <p>No members in this team yet</p>
           </div>
           <div *ngIf="teamMembers.length > 0" class="members-list">
             <div *ngFor="let member of teamMembers" class="member-item">
-              <div>
+              <div class="member-info">
                 <strong>{{ member.displayName }}</strong>
                 <p class="member-email">{{ member.email }}</p>
               </div>
+              <button class="btn btn-small btn-danger" (click)="removeMemberFromTeam(member.id)" title="Remove member">
+                ✕
+              </button>
             </div>
           </div>
         </div>

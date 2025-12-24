@@ -74,6 +74,13 @@
           <span class="value">{{ selectedUser.email }}</span>
         </div>
         <div class="detail-row">
+          <span class="label">Status:</span>
+          <span class="value">
+            <span *ngIf="selectedUser.isManager" class="badge badge-manager">👔 Manager</span>
+            <span *ngIf="!selectedUser.teamId" class="badge badge-warning">⚠️ No Team</span>
+          </span>
+        </div>
+        <div class="detail-row">
           <span class="label">Team:</span>
           <span class="value">
             {{ selectedUser.teamId ? getTeamName(selectedUser.teamId) : 'No team assigned' }}
@@ -82,6 +89,28 @@
         <div class="detail-row">
           <span class="label">Joined:</span>
           <span class="value">{{ selectedUser.createdAt | date: 'medium' }}</span>
+        </div>
+
+        <div *ngIf="currentUser?.isManager" class="assignment-section">
+          <hr />
+          <h4>Assign to Team</h4>
+          <div class="form-group">
+            <label for="teamSelect">Select Team:</label>
+            <select id="teamSelect" [(ngModel)]="selectedTeamIdForUser" class="form-control">
+              <option value="">-- Select a team --</option>
+              <option *ngFor="let team of teams" [value]="team.id">
+                {{ team.name }}
+              </option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-primary" (click)="assignUserToTeam()" [disabled]="!selectedTeamIdForUser || isAssigning">
+              {{ isAssigning ? 'Assigning...' : 'Assign to Team' }}
+            </button>
+            <button class="btn btn-danger" (click)="removeUserFromTeam()" *ngIf="selectedUser.teamId" [disabled]="isAssigning">
+              Remove from Team
+            </button>
+          </div>
         </div>
       </div>
     </div>
