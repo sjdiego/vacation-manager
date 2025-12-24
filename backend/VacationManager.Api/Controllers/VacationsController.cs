@@ -57,7 +57,7 @@ public class VacationsController : ControllerBase
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
         if (user == null || !user.IsManager || user.TeamId == null)
-            return Forbid("Only team managers can view pending vacations");
+            return BadRequest(new { error = "Only team managers can view pending vacations" });
 
         var vacations = await _vacationRepository.GetByTeamAsync(user.TeamId.Value);
         var pendingVacations = vacations
@@ -193,11 +193,11 @@ public class VacationsController : ControllerBase
         var manager = await _userRepository.GetByEntraIdAsync(userEntraId);
         
         if (manager == null || !manager.IsManager)
-            return Forbid("Only managers can approve vacations");
+            return BadRequest(new { error = "Only managers can approve vacations" });
 
         var user = await _userRepository.GetByIdAsync(vacation.UserId);
         if (user?.TeamId != manager.TeamId)
-            return Forbid("Can only approve vacations for team members");
+            return BadRequest(new { error = "Can only approve vacations for team members" });
 
         vacation.Status = dto.Approved ? VacationStatus.Approved : VacationStatus.Rejected;
         vacation.ApprovedBy = manager.Id;

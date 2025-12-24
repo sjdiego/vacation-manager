@@ -84,7 +84,7 @@ public class TeamsController : ControllerBase
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
         if (user == null || !user.IsManager)
-            return Forbid("Only managers can create teams");
+            return BadRequest(new { error = "Only managers can create teams" });
 
         var team = new Team
         {
@@ -108,7 +108,7 @@ public class TeamsController : ControllerBase
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
         if (user == null || !user.IsManager)
-            return Forbid("Only managers can update teams");
+            return BadRequest(new { error = "Only managers can update teams" });
 
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)
@@ -134,7 +134,7 @@ public class TeamsController : ControllerBase
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
         if (user == null || !user.IsManager)
-            return Forbid("Only managers can delete teams");
+            return BadRequest(new { error = "Only managers can delete teams" });
 
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)

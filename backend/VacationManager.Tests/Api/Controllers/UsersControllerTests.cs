@@ -62,7 +62,7 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task GetAll_WithNonManager_ReturnsForbid()
+    public async Task GetAll_WithNonManager_ReturnsBadRequest()
     {
         // Arrange
         var entraId = "user-entra-id";
@@ -75,7 +75,7 @@ public class UsersControllerTests
         var result = await _controller.GetAll();
 
         // Assert
-        Assert.IsType<ForbidResult>(result.Result);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task GetByTeam_WithUserNotInTeam_ReturnsForbid()
+    public async Task GetByTeam_WithUserNotInTeam_ReturnsBadRequest()
     {
         // Arrange
         var entraId = "user-entra-id";
@@ -209,7 +209,7 @@ public class UsersControllerTests
         var result = await _controller.GetByTeam(teamId);
 
         // Assert
-        Assert.IsType<ForbidResult>(result.Result);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     [Fact]
@@ -236,7 +236,7 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task AssignUserToTeam_WithNonManager_ReturnsForbid()
+    public async Task AssignUserToTeam_WithNonManager_ReturnsBadRequest()
     {
         // Arrange
         var managerId = "manager-entra-id";
@@ -251,7 +251,7 @@ public class UsersControllerTests
         var result = await _controller.AssignUserToTeam(userId, teamId);
 
         // Assert
-        Assert.IsType<ForbidResult>(result.Result);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     [Fact]
@@ -281,7 +281,7 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task RemoveUserFromTeam_WithNonManager_ReturnsForbid()
+    public async Task RemoveUserFromTeam_WithNonManager_ReturnsBadRequest()
     {
         // Arrange
         var managerId = "user-entra-id";
@@ -295,7 +295,7 @@ public class UsersControllerTests
         var result = await _controller.RemoveUserFromTeam(userId);
 
         // Assert
-        Assert.IsType<ForbidResult>(result.Result);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     [Fact]

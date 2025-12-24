@@ -132,7 +132,7 @@ public class UsersController : ControllerBase
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
         if (user == null || !user.IsManager)
-            return Forbid("Only managers can view all users");
+            return BadRequest(new { error = "Only managers can view all users" });
 
         var users = await _userRepository.GetAllAsync();
         return Ok(_mapper.Map<List<UserDto>>(users));
@@ -147,7 +147,7 @@ public class UsersController : ControllerBase
 
         var manager = await _userRepository.GetByEntraIdAsync(managerEntraId);
         if (manager == null || !manager.IsManager)
-            return Forbid("Only managers can assign users to teams");
+            return BadRequest(new { error = "Only managers can assign users to teams" });
 
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null)
@@ -174,7 +174,7 @@ public class UsersController : ControllerBase
 
         var manager = await _userRepository.GetByEntraIdAsync(managerEntraId);
         if (manager == null || !manager.IsManager)
-            return Forbid("Only managers can remove users from teams");
+            return BadRequest(new { error = "Only managers can remove users from teams" });
 
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null)
@@ -202,10 +202,10 @@ public class UsersController : ControllerBase
 
          var user = await _userRepository.GetByEntraIdAsync(userEntraId);
          if (user == null || user.TeamId == null)
-             return Forbid("User must be part of a team");
+             return BadRequest(new { error = "User must be part of a team" });
 
          if (user.TeamId != teamId && !user.IsManager)
-             return Forbid("Can only view users from your own team");
+             return BadRequest(new { error = "Can only view users from your own team" });
 
          var users = await _userRepository.GetByTeamAsync(teamId);
          return Ok(_mapper.Map<List<UserDto>>(users));

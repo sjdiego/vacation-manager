@@ -85,7 +85,7 @@ public class TeamsControllerTests
     }
 
     [Fact]
-    public async Task Create_WithNonManager_ReturnsForbid()
+    public async Task Create_WithNonManager_ReturnsBadRequest()
     {
         // Arrange
         var managerId = "user-entra-id";
@@ -99,7 +99,7 @@ public class TeamsControllerTests
         var result = await _controller.Create(createDto);
 
         // Assert
-        Assert.IsType<ForbidResult>(result.Result);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public class TeamsControllerTests
     }
 
     [Fact]
-    public async Task Update_WithNonManager_ReturnsForbid()
+    public async Task Update_WithNonManager_ReturnsBadRequest()
     {
         // Arrange
         var teamId = Guid.NewGuid();
@@ -142,7 +142,7 @@ public class TeamsControllerTests
         var result = await _controller.Update(teamId, updateDto);
 
         // Assert
-        Assert.IsType<ForbidResult>(result.Result);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class TeamsControllerTests
     }
 
     [Fact]
-    public async Task Delete_WithNonManager_ReturnsForbid()
+    public async Task Delete_WithNonManager_ReturnsBadRequest()
     {
         // Arrange
         var teamId = Guid.NewGuid();
@@ -186,7 +186,7 @@ public class TeamsControllerTests
         var result = await _controller.Delete(teamId);
 
         // Assert
-        Assert.IsType<ForbidResult>(result);
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
