@@ -5,5 +5,25 @@
   },
   "mobileApiLocation": "api",
   "apiLocation": "api",
-  "outputLocation": "dist/vacation-manager-frontend"
+  "outputLocation": "dist/vacation-manager-frontend",
+  "httpHeaders": [
+    {
+      "pattern": "*.js",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "pattern": "*.css",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "pattern": "index.html",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      }
+    }
+  ]
 }
