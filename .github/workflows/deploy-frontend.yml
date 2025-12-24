@@ -43,4 +43,3 @@ jobs:
         action: "upload"
         app_location: "frontend/dist/vacation-manager-frontend"
         output_location: ""
-        build_timeout_in_minutes: 5
