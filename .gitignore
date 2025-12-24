@@ -1,0 +1,35 @@
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.vscode/
+frontend/.env.local
+
+# Backend
+backend/bin/
+backend/obj/
+backend/.vs/
+backend/.vscode/
+backend/appsettings.local.json
+backend/*.user
+backend/**/*.db
+backend/**/*.db-shm
+backend/**/*.db-wal
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build artifacts
+dist/
+build/

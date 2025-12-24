@@ -1,0 +1,26 @@
+<div class="login-container">
+  <div class="login-box">
+    <div class="login-header">
+      <h1>🏖️ Vacation Manager</h1>
+      <p>Sign in with your Microsoft account</p>
+    </div>
+
+    <button 
+      class="btn btn-microsoft" 
+      (click)="loginWithMSAL()" 
+      [disabled]="isLoading"
+    >
+      <span class="ms-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path d="M11.4 24H0V12.6h11.4V24ZM24 24H12.6V12.6H24V24ZM11.4 11.4H0V0h11.4v11.4Zm12.6 0H12.6V0H24v11.4Z"/>
+        </svg>
+      </span>
+      <span>{{ isLoading ? 'Signing in...' : 'Sign in with Microsoft' }}</span>
+    </button>
+
+    <div class="login-footer">
+      <p class="beta-note">🔐 Enterprise Authentication</p>
+      <p class="info-text">This application uses Microsoft 365 for secure authentication</p>
+    </div>
+  </div>
+</div>

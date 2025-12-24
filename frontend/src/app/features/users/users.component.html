@@ -1,0 +1,89 @@
+<div class="users-container">
+  <div class="users-header">
+    <h2>Users Management</h2>
+    <div class="header-actions">
+      <input
+        type="text"
+        placeholder="Search users..."
+        [(ngModel)]="searchTerm"
+        (input)="onSearch()"
+        class="search-input"
+      />
+      <select [(ngModel)]="filterTeamId" (change)="onFilterChange()" class="team-filter">
+        <option value="">All Teams</option>
+        <option *ngFor="let team of teams" [value]="team.id">
+          {{ team.name }}
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="loading">
+    <p>Loading users...</p>
+  </div>
+
+  <div *ngIf="!isLoading && filteredUsers.length === 0" class="empty-state">
+    <p>No users found</p>
+  </div>
+
+  <div *ngIf="!isLoading && filteredUsers.length > 0" class="users-list">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>Display Name</th>
+          <th>Email</th>
+          <th>Team</th>
+          <th>Joined</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of filteredUsers" class="user-row">
+          <td class="user-name">{{ user.displayName }}</td>
+          <td>{{ user.email }}</td>
+          <td>
+            <span *ngIf="user.teamId" class="team-badge">
+              {{ getTeamName(user.teamId) }}
+            </span>
+            <span *ngIf="!user.teamId" class="no-team">No team</span>
+          </td>
+          <td class="date">{{ user.createdAt | date: 'MMM d, yyyy' }}</td>
+          <td class="actions">
+            <button class="btn-small btn-info" (click)="viewUser(user)" title="View details">
+              👁️
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div *ngIf="selectedUser" class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>User Details</h3>
+        <button class="btn-close" (click)="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-row">
+          <span class="label">Display Name:</span>
+          <span class="value">{{ selectedUser.displayName }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Email:</span>
+          <span class="value">{{ selectedUser.email }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Team:</span>
+          <span class="value">
+            {{ selectedUser.teamId ? getTeamName(selectedUser.teamId) : 'No team assigned' }}
+          </span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Joined:</span>
+          <span class="value">{{ selectedUser.createdAt | date: 'medium' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,57 @@
+<div class="team-calendar-container">
+  <div class="calendar-header">
+    <button class="btn btn-small" (click)="previousMonth()">← Previous</button>
+    <h2>{{ getMonthYear() }}</h2>
+    <button class="btn btn-small" (click)="nextMonth()">Next →</button>
+  </div>
+
+  <div *ngIf="isLoading" class="loading">
+    <p>Loading team vacations...</p>
+  </div>
+
+  <div *ngIf="!isLoading" class="calendar-grid">
+    <div class="weekdays">
+      <div class="weekday">Sun</div>
+      <div class="weekday">Mon</div>
+      <div class="weekday">Tue</div>
+      <div class="weekday">Wed</div>
+      <div class="weekday">Thu</div>
+      <div class="weekday">Fri</div>
+      <div class="weekday">Sat</div>
+    </div>
+
+    <div class="days">
+      <div *ngFor="let i of [].constructor(getEmptyDays())" class="day empty"></div>
+      
+      <div *ngFor="let day of daysInMonth" class="day" [class.has-vacation]="getVacationsForDay(day).length > 0">
+        <div class="day-number">{{ day }}</div>
+        <div class="day-vacations">
+          <div *ngFor="let vacation of getVacationsForDay(day)" 
+               [ngClass]="['vacation-item', 'status-' + (getStatusName(vacation.status) | lowercase)]"
+               [title]="vacation.notes">
+            {{ vacation.userName || 'Team Member' }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!isLoading && vacations.length === 0" class="empty-state">
+    <p>No team vacations scheduled for this period.</p>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <span class="status-badge badge-approved"></span>
+      <span>Approved</span>
+    </div>
+    <div class="legend-item">
+      <span class="status-badge badge-pending"></span>
+      <span>Pending</span>
+    </div>
+    <div class="legend-item">
+      <span class="status-badge badge-rejected"></span>
+      <span>Rejected</span>
+    </div>
+  </div>
+</div>

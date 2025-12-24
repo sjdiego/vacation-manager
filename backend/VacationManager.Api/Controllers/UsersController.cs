@@ -1,0 +1,153 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using AutoMapper;
+using VacationManager.Core.DTOs;
+using VacationManager.Core.Entities;
+using VacationManager.Core.Interfaces;
+using VacationManager.Api.Services;
+
+namespace VacationManager.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class UsersController : ControllerBase
+{
+    private readonly IUserRepository _userRepository;
+    private readonly IMapper _mapper;
+    private readonly ILogger<UsersController> _logger;
+    private readonly IClaimExtractorService _claimExtractor;
+
+    public UsersController(
+        IUserRepository userRepository,
+        IMapper mapper,
+        ILogger<UsersController> logger,
+        IClaimExtractorService claimExtractor)
+    {
+        _userRepository = userRepository;
+        _mapper = mapper;
+        _logger = logger;
+        _claimExtractor = claimExtractor;
+    }
+
+    [HttpGet("me")]
+    public async Task<ActionResult<UserDto>> GetMe()
+    {
+        var userEntraId = _claimExtractor.GetEntraId(User);
+        if (string.IsNullOrEmpty(userEntraId))
+            return Unauthorized();
+
+        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
+        if (user == null)
+            return NotFound();
+
+        return Ok(_mapper.Map<UserDto>(user));
+    }
+
+    [HttpPost("team/{teamId}")]
+    public async Task<ActionResult<UserDto>> AddToTeam(Guid teamId)
+    {
+        var userEntraId = _claimExtractor.GetEntraId(User);
+        if (string.IsNullOrEmpty(userEntraId))
+            return Unauthorized();
+
+        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
+        if (user == null)
+            return NotFound("User not found");
+
+        if (user.TeamId == teamId)
+            return BadRequest(new { error = "User is already member of this team" });
+
+        user.TeamId = teamId;
+        user.UpdatedAt = DateTime.UtcNow;
+        
+        var updated = await _userRepository.UpdateAsync(user);
+        _logger.LogInformation("User {UserId} added to team {TeamId}", user.Id, teamId);
+
+        return Ok(_mapper.Map<UserDto>(updated));
+    }
+
+    [HttpDelete("team")]
+    public async Task<ActionResult<UserDto>> RemoveFromTeam()
+    {
+        var userEntraId = _claimExtractor.GetEntraId(User);
+        if (string.IsNullOrEmpty(userEntraId))
+            return Unauthorized();
+
+        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
+        if (user == null)
+            return NotFound("User not found");
+
+        if (user.TeamId == null)
+            return BadRequest(new { error = "User is not member of any team" });
+
+        var previousTeamId = user.TeamId;
+        user.TeamId = null;
+        user.UpdatedAt = DateTime.UtcNow;
+        
+        var updated = await _userRepository.UpdateAsync(user);
+        _logger.LogInformation("User {UserId} removed from team {TeamId}", user.Id, previousTeamId);
+
+        return Ok(_mapper.Map<UserDto>(updated));
+    }
+
+    [HttpPost("register")]
+    public async Task<ActionResult<UserDto>> Register()
+    {
+        var userEntraId = _claimExtractor.GetEntraId(User);
+        if (string.IsNullOrEmpty(userEntraId))
+            return Unauthorized(new { error = "objectidentifier claim not found" });
+
+        var existingUser = await _userRepository.GetByEntraIdAsync(userEntraId);
+        if (existingUser != null)
+            return BadRequest(new { error = "User already registered" });
+
+        var email = _claimExtractor.GetEmail(User);
+        var displayName = _claimExtractor.GetName(User);
+
+        if (string.IsNullOrEmpty(email))
+            return BadRequest(new { error = "Could not extract email from token" });
+
+        if (string.IsNullOrEmpty(displayName))
+            return BadRequest(new { error = "Could not extract display name from token" });
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            EntraId = userEntraId,
+            Email = email,
+            DisplayName = displayName,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var created = await _userRepository.CreateAsync(user);
+        _logger.LogInformation("User auto-registered: {UserId} with EntraId: {EntraId} and email: {Email}", created.Id, userEntraId, email);
+
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, _mapper.Map<UserDto>(created));
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<UserDto>> GetById(Guid id)
+    {
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user == null)
+            return NotFound();
+
+        return Ok(_mapper.Map<UserDto>(user));
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetAll()
+    {
+        var users = await _userRepository.GetAllAsync();
+        return Ok(_mapper.Map<List<UserDto>>(users));
+    }
+
+    [HttpGet("team/{teamId}")]
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetByTeam(Guid teamId)
+    {
+        var users = await _userRepository.GetByTeamAsync(teamId);
+        return Ok(_mapper.Map<List<UserDto>>(users));
+    }
+}

@@ -1,0 +1,189 @@
+.approvals-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.approvals-container h2 {
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+}
+
+.approvals-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.pending-list,
+.approval-form {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pending-list h3,
+.approval-form h3 {
+  color: #333;
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.empty-state {
+  color: #666;
+  text-align: center;
+  padding: 30px 20px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.vacation-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 10px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vacation-card:hover {
+  border-color: #007bff;
+  background-color: #f0f8ff;
+}
+
+.vacation-card.selected {
+  border-color: #007bff;
+  background-color: #e7f3ff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.vacation-info {
+  flex: 1;
+}
+
+.vacation-dates {
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 5px 0;
+}
+
+.vacation-type {
+  color: #666;
+  margin: 0 0 5px 0;
+  font-size: 14px;
+}
+
+.vacation-notes {
+  color: #999;
+  margin: 0;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.vacation-status {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.status-0 {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-1 {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-2 {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-3 {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: bold;
+}
+
+.form-group p {
+  margin: 8px 0;
+  color: #555;
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn {
+  flex: 1;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  font-size: 14px;
+}
+
+.btn-approve {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-approve:hover {
+  background-color: #218838;
+}
+
+.btn-reject {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-reject:hover {
+  background-color: #c82333;
+}
+
+@media (max-width: 768px) {
+  .approvals-content {
+    grid-template-columns: 1fr;
+  }
+}

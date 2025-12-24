@@ -1,0 +1,36 @@
+<div class="app-container">
+  <nav class="app-navbar" *ngIf="currentUser">
+    <div class="navbar-content">
+      <h1 class="app-title">🏖️ Vacation Manager</h1>
+      <ul class="nav-links">
+        <li><a routerLink="/vacations" routerLinkActive="active">My Vacations</a></li>
+        <li><a routerLink="/approvals" routerLinkActive="active">Approvals</a></li>
+        <li><a routerLink="/team-calendar" routerLinkActive="active">Team Calendar</a></li>
+        <li><a routerLink="/users" routerLinkActive="active">Users</a></li>
+        <li><a routerLink="/teams" routerLinkActive="active">Teams</a></li>
+      </ul>
+      <div class="navbar-right">
+        <div class="user-info" *ngIf="currentUser">
+          <span class="user-name">{{ currentUser.name }}</span>
+          <button class="btn-logout" (click)="logout()" title="Logout">
+            🚪 Logout
+          </button>
+        </div>
+        <div *ngIf="!currentUser" class="not-logged-in">
+          <a routerLink="/login" class="btn-login">Login</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" *ngIf="toasts$ | async as toasts">
+    <div *ngFor="let toast of toasts" [ngClass]="['toast', 'toast-' + toast.type]">
+      {{ toast.message }}
+    </div>
+  </div>
+
+  <main class="app-content" [class.full-screen]="!currentUser">
+    <router-outlet></router-outlet>
+  </main>
+</div>
