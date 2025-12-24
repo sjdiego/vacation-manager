@@ -30,6 +30,10 @@ jobs:
       working-directory: ./frontend
       run: npm install
 
+    - name: Clear Angular build cache
+      working-directory: ./frontend
+      run: rm -rf dist .angular/cache
+
     - name: Build
       working-directory: ./frontend
       run: npm run build:prod
