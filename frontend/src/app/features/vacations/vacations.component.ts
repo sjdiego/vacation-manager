@@ -171,6 +171,22 @@ export class VacationsComponent implements OnInit {
     });
   }
 
+  cancelVacation(vacation: VacationDto): void {
+    if (!confirm('Are you sure you want to cancel this approved vacation?')) {
+      return;
+    }
+
+    this.vacationService.cancelVacation(vacation.id).subscribe({
+      next: () => {
+        this.toastService.success('Vacation cancelled successfully!');
+        this.loadVacations();
+      },
+      error: (error) => {
+        this.toastService.error(error.message || 'Failed to cancel vacation');
+      }
+    });
+  }
+
   private formatDateForInput(date: Date | string): string {
     const d = new Date(date);
     const month = String(d.getMonth() + 1).padStart(2, '0');

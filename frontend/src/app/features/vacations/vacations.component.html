@@ -35,6 +35,9 @@
         <button class="btn btn-small btn-danger" (click)="deleteVacation(vacation.id)" *ngIf="getStatusName(vacation.status) === 'Pending'">
           Delete
         </button>
+        <button class="btn btn-small btn-danger" (click)="cancelVacation(vacation)" *ngIf="getStatusName(vacation.status) === 'Approved'">
+          Cancel
+        </button>
       </div>
     </div>
   </div>

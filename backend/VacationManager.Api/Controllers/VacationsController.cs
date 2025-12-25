@@ -209,4 +209,35 @@ public class VacationsController : ControllerBase
 
         return Ok(_mapper.Map<VacationDto>(updated));
     }
+
+    [HttpPost("{id}/cancel")]
+    public async Task<ActionResult<VacationDto>> Cancel(Guid id)
+    {
+        var vacation = await _vacationRepository.GetByIdAsync(id);
+        if (vacation == null)
+            return NotFound();
+
+        var userEntraId = _claimExtractor.GetEntraId(User);
+        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
+        
+        if (user == null)
+            return Unauthorized();
+
+        var isOwner = vacation.UserId == user.Id;
+        var isManager = user.IsManager && (await _userRepository.GetByIdAsync(vacation.UserId))?.TeamId == user.TeamId;
+
+        if (!isOwner && !isManager)
+            return Forbid();
+
+        if (vacation.Status != VacationStatus.Approved)
+            return BadRequest(new { error = "Only approved vacations can be cancelled" });
+
+        vacation.Status = VacationStatus.Cancelled;
+        vacation.UpdatedAt = DateTime.UtcNow;
+
+        var updated = await _vacationRepository.UpdateAsync(vacation);
+        _logger.LogInformation("Vacation {VacationId} cancelled by {UserId}", id, user.Id);
+
+        return Ok(_mapper.Map<VacationDto>(updated));
+    }
 }

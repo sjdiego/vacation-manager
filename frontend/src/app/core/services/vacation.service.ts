@@ -127,4 +127,8 @@ export class VacationService {
     const dto: ApproveVacationDto = { approved, rejectReason };
     return this.apiService.post<VacationDto>(`${this.endpoint}/${id}/approve`, dto);
   }
+
+  cancelVacation(id: string): Observable<VacationDto> {
+    return this.apiService.post<VacationDto>(`${this.endpoint}/${id}/cancel`, {});
+  }
 }
