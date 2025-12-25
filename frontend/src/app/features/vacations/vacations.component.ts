@@ -84,14 +84,20 @@ export class VacationsComponent implements OnInit {
   }
 
   getTypeName(type: number | VacationType): string {
-    const typeMap: { [key: number]: string } = {
-      0: 'Vacation',
-      1: 'Sick Leave',
-      2: 'Personal Day',
-      3: 'Compensatory Time',
-      4: 'Other'
-    };
-    return typeMap[type] || 'Unknown';
+    switch(type) {
+      case VacationType.Vacation:
+        return 'Vacation';
+      case VacationType.SickLeave:
+        return 'Sick Leave';
+      case VacationType.PersonalDay:
+        return 'Personal Day';
+      case VacationType.CompensatoryTime:
+        return 'Compensatory Time';
+      case VacationType.Other:
+        return 'Other';
+      default:
+        return String(type);
+    }
   }
 
   getStatusName(status: string | number | VacationStatus): string {
@@ -99,11 +105,7 @@ export class VacationsComponent implements OnInit {
       '0': 'Pending',
       '1': 'Approved',
       '2': 'Rejected',
-      '3': 'Cancelled',
-      'Pending': 'Pending',
-      'Approved': 'Approved',
-      'Rejected': 'Rejected',
-      'Cancelled': 'Cancelled'
+      '3': 'Cancelled'
     };
     return statusMap[String(status)] || String(status);
   }
