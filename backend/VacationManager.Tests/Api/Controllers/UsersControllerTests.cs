@@ -137,6 +137,7 @@ public class UsersControllerTests
 
         _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
         _userRepository.GetByEntraIdAsync(entraId).Returns((User?)null);
+        _userRepository.GetAllAsync().Returns(new List<User> { new User { Id = Guid.NewGuid(), EntraId = "other", Email = "other@example.com", DisplayName = "Other" } }); // Not first user
         _claimExtractor.GetEmail(_controller.User).Returns(email);
         _claimExtractor.GetName(_controller.User).Returns(displayName);
         _userRepository.CreateAsync(Arg.Any<User>()).Returns(createdUser);
@@ -149,6 +150,33 @@ public class UsersControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         Assert.IsType<UserDto>(okResult.Value);
         await _userRepository.Received(1).CreateAsync(Arg.Any<User>());
+    }
+
+    [Fact]
+    public async Task GetMe_WithFirstUser_AutoRegistersAsManagerAndReturnsUser()
+    {
+        // Arrange
+        var entraId = "first-user-entra-id";
+        var email = "firstuser@example.com";
+        var displayName = "First User";
+        var createdUser = new User { Id = Guid.NewGuid(), EntraId = entraId, Email = email, DisplayName = displayName, IsManager = true };
+        var userDto = new UserDto { Id = createdUser.Id, IsManager = true };
+
+        _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
+        _userRepository.GetByEntraIdAsync(entraId).Returns((User?)null);
+        _userRepository.GetAllAsync().Returns(new List<User>()); // First user - empty list
+        _claimExtractor.GetEmail(_controller.User).Returns(email);
+        _claimExtractor.GetName(_controller.User).Returns(displayName);
+        _userRepository.CreateAsync(Arg.Is<User>(u => u.IsManager)).Returns(createdUser);
+        _mapper.Map<UserDto>(createdUser).Returns(userDto);
+
+        // Act
+        var result = await _controller.GetMe();
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.IsType<UserDto>(okResult.Value);
+        await _userRepository.Received(1).CreateAsync(Arg.Is<User>(u => u.IsManager));
     }
 
     [Fact]

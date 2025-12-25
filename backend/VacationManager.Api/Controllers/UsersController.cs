@@ -49,18 +49,30 @@ public class UsersController : ControllerBase
                 return NotFound();
             }
 
+            // Check if this is the first user in the system
+            var existingUsersCount = (await _userRepository.GetAllAsync()).Count();
+            var isFirstUser = existingUsersCount == 0;
+
             user = new User
             {
                 Id = Guid.NewGuid(),
                 EntraId = userEntraId,
                 Email = email,
                 DisplayName = displayName,
+                IsManager = isFirstUser,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 
             user = await _userRepository.CreateAsync(user);
-            _logger.LogInformation("User auto-registered: {UserId} with EntraId: {EntraId} and email: {Email}", user.Id, userEntraId, email);
+            if (isFirstUser)
+            {
+                _logger.LogInformation("First user auto-registered as manager: {UserId} with EntraId: {EntraId} and email: {Email}", user.Id, userEntraId, email);
+            }
+            else
+            {
+                _logger.LogInformation("User auto-registered: {UserId} with EntraId: {EntraId} and email: {Email}", user.Id, userEntraId, email);
+            }
         }
 
         return Ok(_mapper.Map<UserDto>(user));
