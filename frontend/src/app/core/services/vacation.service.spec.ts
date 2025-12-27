@@ -47,7 +47,7 @@ describe('VacationService', () => {
       done();
     });
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/vacations`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/v1/vacations`);
     expect(req.request.method).toBe('GET');
     req.flush(mockVacations);
   });
@@ -58,7 +58,7 @@ describe('VacationService', () => {
       done();
     });
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/vacations/1`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/v1/vacations/1`);
     expect(req.request.method).toBe('GET');
     req.flush(mockVacation);
   });
@@ -76,7 +76,7 @@ describe('VacationService', () => {
       done();
     });
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/vacations`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/v1/vacations`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(createDto);
     req.flush(mockVacation);
@@ -88,7 +88,7 @@ describe('VacationService', () => {
       done();
     });
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/vacations/1`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/v1/vacations/1`);
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
   });

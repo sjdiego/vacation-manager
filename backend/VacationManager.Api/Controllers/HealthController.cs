@@ -1,12 +1,21 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Asp.Versioning;
 
 namespace VacationManager.Api.Controllers
 {
     [ApiController]
     [Route("")]
+    [ApiVersionNeutral]
     public class HealthController : ControllerBase
     {
+        private readonly IWebHostEnvironment _environment;
+
+        public HealthController(IWebHostEnvironment environment)
+        {
+            _environment = environment;
+        }
+
         /// <summary>
         /// Get API welcome information and health status
         /// </summary>
@@ -14,14 +23,16 @@ namespace VacationManager.Api.Controllers
         [HttpGet]
         public ActionResult<object> Welcome()
         {
-            return Ok(new
+            var response = new
             {
                 message = "Welcome to Vacation Manager API",
                 version = "1.0.0",
                 status = "healthy",
                 timestamp = DateTime.UtcNow,
-                documentation = "/swagger/index.html"
-            });
+                documentation = _environment.IsDevelopment() ? "/swagger/index.html" : null
+            };
+
+            return Ok(response);
         }
 
         /// <summary>

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Asp.Versioning;
 using AutoMapper;
 using VacationManager.Core.DTOs;
 using VacationManager.Core.Entities;
@@ -9,7 +10,8 @@ using VacationManager.Api.Services;
 namespace VacationManager.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
+[ApiVersion("1.0")]
 [Authorize]
 public class TeamsController : ControllerBase
 {

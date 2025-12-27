@@ -18,7 +18,7 @@ export interface UserDto {
   providedIn: 'root'
 })
 export class UserService {
-  private endpoint = '/users';
+  private endpoint = '/v1/users';
   private currentUserSubject = new BehaviorSubject<UserDto | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
   private currentUserCache$: Observable<UserDto> | null = null;
