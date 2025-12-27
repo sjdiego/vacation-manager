@@ -54,7 +54,7 @@ export interface ApproveVacationDto {
   providedIn: 'root'
 })
 export class VacationService {
-  private endpoint = '/vacations';
+  private endpoint = '/v1/vacations';
   private readonly CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
   private teamVacationsCache: Map<string, { data: Observable<VacationDto[]>, timestamp: number }> = new Map();
 

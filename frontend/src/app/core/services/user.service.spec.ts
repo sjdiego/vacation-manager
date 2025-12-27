@@ -44,7 +44,7 @@ describe('UserService', () => {
       done();
     });
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/users/me`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/v1/users/me`);
     expect(req.request.method).toBe('GET');
     req.flush(mockUser);
   });
@@ -58,7 +58,7 @@ describe('UserService', () => {
       done();
     });
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/users`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/v1/users`);
     expect(req.request.method).toBe('GET');
     req.flush(mockUsers);
   });

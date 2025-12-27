@@ -26,7 +26,7 @@ export interface UpdateTeamDto {
   providedIn: 'root'
 })
 export class TeamService {
-  private endpoint = '/teams';
+  private endpoint = '/v1/teams';
 
   constructor(private apiService: ApiService) {}
 
