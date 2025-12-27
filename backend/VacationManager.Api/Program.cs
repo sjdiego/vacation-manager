@@ -1,6 +1,5 @@
 using Serilog;
 using AspNetCoreRateLimit;
-using Asp.Versioning;
 using VacationManager.Api.Extensions;
 using VacationManager.Api.Middleware;
 using VacationManager.Api.Filters;
@@ -15,17 +14,9 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-// Add API versioning
-builder.Services.AddApiVersioning(options =>
-{
-    options.DefaultApiVersion = new ApiVersion(1, 0);
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.ReportApiVersions = true;
-    options.ApiVersionReader = new UrlSegmentApiVersionReader();
-}).AddMvc();
-
 // Add services using extension methods
 builder.Services.AddApplicationAuthentication(builder.Configuration);
+builder.Services.AddApplicationVersioning();
 builder.Services.AddApplicationServices();
 builder.Services.AddApplicationValidation();
 builder.Services.AddApplicationDatabase(builder.Configuration);
