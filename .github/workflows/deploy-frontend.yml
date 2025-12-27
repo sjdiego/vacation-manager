@@ -31,29 +31,6 @@ jobs:
       working-directory: ./frontend
       run: npm install
 
-    - name: Configure production URLs
-      working-directory: ./frontend
-      env:
-        FRONTEND_API_URL: ${{ vars.FRONTEND_API_URL }}
-        FRONTEND_REDIRECT_URI: ${{ vars.FRONTEND_REDIRECT_URI }}
-      run: |
-        if [ -z "$FRONTEND_API_URL" ] || [ -z "$FRONTEND_REDIRECT_URI" ]; then
-          echo "::error::Missing FRONTEND_API_URL and/or FRONTEND_REDIRECT_URI GitHub environment variables"
-          exit 1
-        fi
-
-        cat > src/environments/environment.prod.ts <<EOF
-        export const environment = {
-          production: true,
-          apiUrl: '$FRONTEND_API_URL',
-          auth: {
-            clientId: 'f78c1a6a-77c6-4601-830d-ce0e031b1a58',
-            authority: 'https://login.microsoftonline.com/f1496c44-cb7c-4498-84e1-4704ec4716e9',
-            redirectUri: '$FRONTEND_REDIRECT_URI'
-          }
-        };
-        EOF
-
     - name: Clear Angular build cache
       working-directory: ./frontend
       run: rm -rf dist .angular/cache
@@ -74,13 +51,25 @@ jobs:
     name: Deploy to Production
     environment: production
     steps:
-    - uses: actions/checkout@v4
-
     - name: Download artifact
       uses: actions/download-artifact@v4
       with:
         name: frontend-build
         path: frontend/dist/vacation-manager-frontend
+
+    - name: Replace environment placeholders
+      working-directory: frontend/dist/vacation-manager-frontend
+      env:
+        FRONTEND_API_URL: ${{ vars.FRONTEND_API_URL }}
+        FRONTEND_REDIRECT_URI: ${{ vars.FRONTEND_REDIRECT_URI }}
+      run: |
+        if [ -z "$FRONTEND_API_URL" ] || [ -z "$FRONTEND_REDIRECT_URI" ]; then
+          echo "::error::Missing FRONTEND_API_URL and/or FRONTEND_REDIRECT_URI GitHub environment variables"
+          exit 1
+        fi
+        
+        find . -type f -name "*.js" -exec sed -i "s|API_URL_PLACEHOLDER|$FRONTEND_API_URL|g" {} +
+        find . -type f -name "*.js" -exec sed -i "s|REDIRECT_URI_PLACEHOLDER|$FRONTEND_REDIRECT_URI|g" {} +
 
     - name: Deploy to Static Web Apps
       id: builddeploy
