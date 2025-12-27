@@ -1,18 +1,19 @@
 name: Deploy Frontend to Static Web Apps
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [ main ]
     paths:
       - 'frontend/**'
       - '.github/workflows/deploy-frontend.yml'
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     name: Build
-    environment: production
     steps:
     - uses: actions/checkout@v4
       with:
