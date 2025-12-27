@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '@environments/environment';
 
 export interface ApiResponse<T> {
+  success: boolean;
   data?: T;
-  error?: string;
   message?: string;
+  meta?: Record<string, any>;
 }
 
 @Injectable({
@@ -18,22 +20,47 @@ export class ApiService {
   constructor(protected http: HttpClient) {}
 
   get<T>(endpoint: string, params?: HttpParams | Record<string, string | string[]>): Observable<T> {
-    return this.http.get<T>(`${this.apiUrl}${endpoint}`, { params });
+    return this.http.get<ApiResponse<T>>(`${this.apiUrl}${endpoint}`, { params }).pipe(
+      map(response => this.unwrapResponse(response))
+    );
   }
 
   post<T>(endpoint: string, body: any): Observable<T> {
-    return this.http.post<T>(`${this.apiUrl}${endpoint}`, body);
+    return this.http.post<ApiResponse<T>>(`${this.apiUrl}${endpoint}`, body).pipe(
+      map(response => this.unwrapResponse(response))
+    );
   }
 
   put<T>(endpoint: string, body: any): Observable<T> {
-    return this.http.put<T>(`${this.apiUrl}${endpoint}`, body);
+    return this.http.put<ApiResponse<T>>(`${this.apiUrl}${endpoint}`, body).pipe(
+      map(response => this.unwrapResponse(response))
+    );
   }
 
   delete<T>(endpoint: string): Observable<T> {
-    return this.http.delete<T>(`${this.apiUrl}${endpoint}`);
+    return this.http.delete<ApiResponse<T>>(`${this.apiUrl}${endpoint}`).pipe(
+      map(response => this.unwrapResponse(response))
+    );
   }
 
   patch<T>(endpoint: string, body: any): Observable<T> {
-    return this.http.patch<T>(`${this.apiUrl}${endpoint}`, body);
+    return this.http.patch<ApiResponse<T>>(`${this.apiUrl}${endpoint}`, body).pipe(
+      map(response => this.unwrapResponse(response))
+    );
+  }
+
+  private unwrapResponse<T>(response: ApiResponse<T>): T {
+    // Handle null responses (e.g., from DELETE operations)
+    if (response === null || response === undefined) {
+      return response as T;
+    }
+    
+    if (response.success && response.data !== undefined) {
+      return response.data;
+    }
+    
+    // Fallback for responses that aren't wrapped (like health endpoint)
+    // or when data is undefined but response is successful
+    return response as unknown as T;
   }
 }

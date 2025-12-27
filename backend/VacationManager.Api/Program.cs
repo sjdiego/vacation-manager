@@ -34,6 +34,7 @@ builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
+    options.Filters.Add<ApiResponseWrapperFilter>();
 })
     .AddJsonOptions(options =>
     {
@@ -46,6 +47,7 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline
 app.UseApplicationSwaggerUI(app.Configuration);
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseHttpsRedirection();
 app.UseIpRateLimiting();

@@ -6,6 +6,7 @@ using VacationManager.Core.DTOs;
 using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
 using VacationManager.Api.Services;
+using VacationManager.Api.Extensions;
 
 namespace VacationManager.Api.Controllers;
 
@@ -59,7 +60,7 @@ public class VacationsController : ControllerBase
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
         if (user == null || !user.IsManager || user.TeamId == null)
-            return BadRequest(new { error = "Only team managers can view pending vacations" });
+            return this.ForbiddenProblem("Only team managers can view pending vacations");
 
         var vacations = await _vacationRepository.GetByTeamAsync(user.TeamId.Value);
         var pendingVacations = vacations
@@ -78,7 +79,7 @@ public class VacationsController : ControllerBase
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
         if (user == null || user.TeamId == null)
-            return BadRequest("User must be part of a team");
+            return this.BadRequestProblem("User must be part of a team");
 
         var vacations = await _vacationRepository.GetByTeamAsync(user.TeamId.Value);
         
@@ -114,7 +115,7 @@ public class VacationsController : ControllerBase
             return NotFound("User not found");
 
         if (user.TeamId == null)
-            return BadRequest("User must be part of a team to request vacation");
+            return this.BadRequestProblem("User must be part of a team to request vacation");
 
         var userVacations = await _vacationRepository.GetByUserIdAsync(user.Id);
         var hasOverlap = userVacations.Any(v => 
@@ -123,7 +124,7 @@ public class VacationsController : ControllerBase
             v.EndDate >= dto.StartDate);
 
         if (hasOverlap)
-            return BadRequest("You have overlapping approved vacations in this date range");
+            return this.ConflictProblem("You have overlapping approved vacations in this date range");
 
         var vacation = new Vacation
         {
@@ -195,18 +196,18 @@ public class VacationsController : ControllerBase
         var manager = await _userRepository.GetByEntraIdAsync(userEntraId);
         
         if (manager == null || !manager.IsManager)
-            return BadRequest(new { error = "Only managers can approve vacations" });
+            return this.ForbiddenProblem("Only managers can approve vacations");
 
         var user = await _userRepository.GetByIdAsync(vacation.UserId);
         if (user?.TeamId != manager.TeamId)
-            return BadRequest(new { error = "Can only approve vacations for team members" });
+            return this.ForbiddenProblem("Can only approve vacations for team members");
 
         vacation.Status = dto.Approved ? VacationStatus.Approved : VacationStatus.Rejected;
         vacation.ApprovedBy = manager.Id;
         vacation.UpdatedAt = DateTime.UtcNow;
 
         var updated = await _vacationRepository.UpdateAsync(vacation);
-        _logger.LogInformation("Vacation {VacationId} {Status} by {ManagerId}", 
+        _logger.LogInformation("Vacation {VacationId} {Status} by {ManagerId}",
             id, vacation.Status, manager.Id);
 
         return Ok(_mapper.Map<VacationDto>(updated));
@@ -232,7 +233,7 @@ public class VacationsController : ControllerBase
             return Forbid();
 
         if (vacation.Status != VacationStatus.Approved)
-            return BadRequest(new { error = "Only approved vacations can be cancelled" });
+            return this.BadRequestProblem("Only approved vacations can be cancelled");
 
         vacation.Status = VacationStatus.Cancelled;
         vacation.UpdatedAt = DateTime.UtcNow;
