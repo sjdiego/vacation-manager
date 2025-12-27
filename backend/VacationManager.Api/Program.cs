@@ -29,7 +29,7 @@ builder.Services.AddControllers(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
-builder.Services.AddApplicationCors(builder.Configuration);
+builder.Services.AddApplicationCors(builder.Configuration, builder.Environment);
 builder.Services.AddApplicationSwagger(builder.Configuration);
 
 var app = builder.Build();

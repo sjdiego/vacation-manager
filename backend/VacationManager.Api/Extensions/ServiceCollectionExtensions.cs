@@ -48,22 +48,31 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddApplicationCors(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddApplicationCors(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
-        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-            ?? new[] { "http://localhost:4200" };
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+
+        if (allowedOrigins is null || allowedOrigins.Length == 0)
+        {
+            allowedOrigins = environment.IsProduction()
+                ? Array.Empty<string>()
+                : new[] { "http://localhost:4200" };
+        }
 
         services.AddCors(options =>
         {
             options.AddPolicy("AllowAngular", policy =>
             {
-                policy.WithOrigins(allowedOrigins)
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .AllowCredentials();
+                if (allowedOrigins.Length > 0)
+                {
+                    policy.WithOrigins(allowedOrigins)
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials();
+                }
             });
         });
-        
+
         return services;
     }
 
