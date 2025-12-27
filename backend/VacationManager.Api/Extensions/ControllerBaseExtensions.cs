@@ -14,11 +14,13 @@ public static class ControllerBaseExtensions
         string? title = null,
         Dictionary<string, object>? extensions = null)
     {
+        var traceId = ProblemDetailsFactory.GetTraceId(controller.HttpContext);
         var problemDetails = ProblemDetailsFactory.CreateBadRequest(
             detail,
             title,
             controller.HttpContext?.Request.Path,
-            extensions);
+            extensions,
+            traceId);
 
         return new BadRequestObjectResult(problemDetails);
     }
@@ -28,10 +30,12 @@ public static class ControllerBaseExtensions
         string detail,
         string? title = null)
     {
+        var traceId = ProblemDetailsFactory.GetTraceId(controller.HttpContext);
         var problemDetails = ProblemDetailsFactory.CreateNotFound(
             detail,
             title,
-            controller.HttpContext?.Request.Path);
+            controller.HttpContext?.Request.Path,
+            traceId);
 
         return new NotFoundObjectResult(problemDetails);
     }
@@ -41,10 +45,12 @@ public static class ControllerBaseExtensions
         string detail,
         string? title = null)
     {
+        var traceId = ProblemDetailsFactory.GetTraceId(controller.HttpContext);
         var problemDetails = ProblemDetailsFactory.CreateForbidden(
             detail,
             title,
-            controller.HttpContext?.Request.Path);
+            controller.HttpContext?.Request.Path,
+            traceId);
 
         return new ObjectResult(problemDetails)
         {
@@ -57,10 +63,12 @@ public static class ControllerBaseExtensions
         string detail,
         string? title = null)
     {
+        var traceId = ProblemDetailsFactory.GetTraceId(controller.HttpContext);
         var problemDetails = ProblemDetailsFactory.CreateConflict(
             detail,
             title,
-            controller.HttpContext?.Request.Path);
+            controller.HttpContext?.Request.Path,
+            traceId);
 
         return new ConflictObjectResult(problemDetails);
     }

@@ -38,6 +38,7 @@ public class GlobalExceptionHandlerMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
+        var traceId = ProblemDetailsFactory.GetTraceId(context);
         Models.ProblemDetails problemDetails;
 
         switch (exception)
@@ -45,19 +46,22 @@ public class GlobalExceptionHandlerMiddleware
             case ArgumentException argEx:
                 problemDetails = ProblemDetailsFactory.CreateBadRequest(
                     argEx.Message,
-                    instance: context.Request.Path);
+                    instance: context.Request.Path,
+                    traceId: traceId);
                 break;
 
             case UnauthorizedAccessException:
                 problemDetails = ProblemDetailsFactory.CreateUnauthorized(
                     "You are not authorized to access this resource",
-                    instance: context.Request.Path);
+                    instance: context.Request.Path,
+                    traceId: traceId);
                 break;
 
             case KeyNotFoundException:
                 problemDetails = ProblemDetailsFactory.CreateNotFound(
                     exception.Message,
-                    instance: context.Request.Path);
+                    instance: context.Request.Path,
+                    traceId: traceId);
                 break;
 
             default:
@@ -76,7 +80,8 @@ public class GlobalExceptionHandlerMiddleware
                 problemDetails = ProblemDetailsFactory.CreateInternalServerError(
                     detail,
                     instance: context.Request.Path,
-                    extensions: extensions);
+                    extensions: extensions,
+                    traceId: traceId);
                 break;
         }
 
