@@ -32,6 +32,7 @@ describe('UserService', () => {
 
   afterEach(() => {
     httpMock.verify();
+    service.clearCache();
   });
 
   it('should be created', () => {
@@ -47,6 +48,96 @@ describe('UserService', () => {
     const req = httpMock.expectOne(`${environment.apiUrl}/users/me`);
     expect(req.request.method).toBe('GET');
     req.flush(mockUser);
+  });
+
+  it('should cache current user after first call', (done) => {
+    // First call - makes HTTP request
+    service.getCurrentUser().subscribe(user => {
+      expect(user).toEqual(mockUser);
+      
+      // Second call - uses cached value
+      service.getCurrentUser().subscribe(cachedUser => {
+        expect(cachedUser).toEqual(mockUser);
+        done();
+      });
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/users/me`);
+    req.flush(mockUser);
+  });
+
+  it('should invalidate cache after TTL expires', (done) => {
+    const realDateNow = Date.now.bind(Date);
+    let currentTime = realDateNow();
+    
+    spyOn(Date, 'now').and.callFake(() => currentTime);
+    
+    service.getCurrentUser().subscribe(user => {
+      expect(user).toEqual(mockUser);
+    });
+
+    const req1 = httpMock.expectOne(`${environment.apiUrl}/users/me`);
+    req1.flush(mockUser);
+
+    // Fast forward 6 minutes (past TTL)
+    currentTime += 6 * 60 * 1000;
+
+    service.getCurrentUser().subscribe(user => {
+      expect(user).toEqual(mockUser);
+      done();
+    });
+
+    const req2 = httpMock.expectOne(`${environment.apiUrl}/users/me`);
+    req2.flush(mockUser);
+  });
+
+  it('should clear cache when clearCache is called', (done) => {
+    service.getCurrentUser().subscribe(user => {
+      expect(user).toEqual(mockUser);
+    });
+
+    const req1 = httpMock.expectOne(`${environment.apiUrl}/users/me`);
+    req1.flush(mockUser);
+
+    service.clearCache();
+
+    service.getCurrentUser().subscribe(user => {
+      expect(user).toEqual(mockUser);
+      done();
+    });
+
+    const req2 = httpMock.expectOne(`${environment.apiUrl}/users/me`);
+    req2.flush(mockUser);
+  });
+
+  it('should clear cache when user is added to team', (done) => {
+    const teamId = 'team-1';
+    
+    service.getCurrentUser().subscribe(() => {});
+    const req1 = httpMock.expectOne(`${environment.apiUrl}/users/me`);
+    req1.flush(mockUser);
+
+    service.addUserToTeam(teamId).subscribe(() => {
+      expect(service['cacheTimestamp']).toBe(0);
+      done();
+    });
+
+    const req2 = httpMock.expectOne(`${environment.apiUrl}/users/team/${teamId}`);
+    req2.flush(mockUser);
+  });
+
+  it('should clear cache when user is removed from team', (done) => {
+    service.getCurrentUser().subscribe(() => {});
+    const req1 = httpMock.expectOne(`${environment.apiUrl}/users/me`);
+    req1.flush(mockUser);
+
+    service.removeUserFromTeam().subscribe(() => {
+      expect(service['cacheTimestamp']).toBe(0);
+      done();
+    });
+
+    const req2 = httpMock.expectOne(`${environment.apiUrl}/users/team`);
+    req2.flush(mockUser);
   });
 
   it('should get all users', (done) => {
