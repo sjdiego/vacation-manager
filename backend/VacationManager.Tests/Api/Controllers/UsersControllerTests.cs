@@ -2,6 +2,7 @@ using Xunit;
 using NSubstitute;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using VacationManager.Api.Controllers;
 using VacationManager.Core.DTOs;
@@ -75,7 +76,8 @@ public class UsersControllerTests
         var result = await _controller.GetAll();
 
         // Assert
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]
@@ -279,7 +281,8 @@ public class UsersControllerTests
         var result = await _controller.AssignUserToTeam(userId, teamId);
 
         // Assert
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]
@@ -323,7 +326,8 @@ public class UsersControllerTests
         var result = await _controller.RemoveUserFromTeam(userId);
 
         // Assert
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]

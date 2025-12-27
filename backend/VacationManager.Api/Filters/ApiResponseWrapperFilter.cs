@@ -1,0 +1,62 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+using VacationManager.Api.Models;
+
+namespace VacationManager.Api.Filters;
+
+/// <summary>
+/// Action filter to wrap successful responses in a standard format
+/// Can be disabled per action with [DisableApiResponseWrapper] attribute
+/// </summary>
+public class ApiResponseWrapperFilter : IActionFilter
+{
+    public void OnActionExecuting(ActionExecutingContext context)
+    {
+        // Nothing to do before action executes
+    }
+
+    public void OnActionExecuted(ActionExecutedContext context)
+    {
+        // Check if the action has DisableApiResponseWrapper attribute
+        var disableWrapper = context.ActionDescriptor.EndpointMetadata
+            .OfType<DisableApiResponseWrapperAttribute>()
+            .Any();
+
+        if (disableWrapper)
+        {
+            return;
+        }
+
+        // Only wrap successful ObjectResult responses
+        if (context.Result is ObjectResult objectResult && 
+            objectResult.StatusCode is >= 200 and < 300)
+        {
+            // Don't wrap if already wrapped, if it's a ProblemDetails, or if value is null
+            if (objectResult.Value == null || 
+                objectResult.Value is ApiResponse<object> || 
+                objectResult.Value is Models.ProblemDetails)
+            {
+                return;
+            }
+
+            var wrappedResponse = new ApiResponse<object>
+            {
+                Success = true,
+                Data = objectResult.Value
+            };
+
+            context.Result = new ObjectResult(wrappedResponse)
+            {
+                StatusCode = objectResult.StatusCode
+            };
+        }
+    }
+}
+
+/// <summary>
+/// Attribute to disable API response wrapping for specific actions
+/// </summary>
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
+public class DisableApiResponseWrapperAttribute : Attribute
+{
+}

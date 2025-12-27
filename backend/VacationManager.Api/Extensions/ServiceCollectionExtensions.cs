@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 using Microsoft.EntityFrameworkCore;
 using FluentValidation;
+using Asp.Versioning;
 using VacationManager.Data;
 using VacationManager.Core.Interfaces;
 using VacationManager.Core.Validators;
@@ -48,6 +49,25 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddApplicationVersioning(this IServiceCollection services)
+    {
+        services.AddApiVersioning(options =>
+        {
+            options.DefaultApiVersion = new ApiVersion(1, 0);
+            options.AssumeDefaultVersionWhenUnspecified = true;
+            options.ReportApiVersions = true;
+            options.ApiVersionReader = new UrlSegmentApiVersionReader();
+        })
+        .AddMvc()
+        .AddApiExplorer(options =>
+        {
+            options.GroupNameFormat = "'v'VVV";
+            options.SubstituteApiVersionInUrl = true;
+        });
+
+        return services;
+    }
+
     public static IServiceCollection AddApplicationCors(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
@@ -84,6 +104,20 @@ public static class ServiceCollectionExtensions
             var apiClientId = configuration["EntraId:ClientId"];
             var scope = $"api://{apiClientId}/access_as_user";
             
+            // API Versioning
+            var provider = services.BuildServiceProvider().GetRequiredService<Asp.Versioning.ApiExplorer.IApiVersionDescriptionProvider>();
+            
+            foreach (var description in provider.ApiVersionDescriptions)
+            {
+                options.SwaggerDoc(description.GroupName, new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "Vacation Manager API",
+                    Version = description.ApiVersion.ToString(),
+                    Description = description.IsDeprecated ? "This API version has been deprecated." : "Vacation Manager REST API"
+                });
+            }
+            
+            // OAuth2 configuration
             options.AddSecurityDefinition("oauth2", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
             {
                 Type = Microsoft.OpenApi.Models.SecuritySchemeType.OAuth2,
@@ -112,6 +146,25 @@ public static class ServiceCollectionExtensions
                         }
                     },
                     new[] { scope }
+                }
+            });
+            
+            // Document Problem Details responses
+            options.MapType<Models.ProblemDetails>(() => new Microsoft.OpenApi.Models.OpenApiSchema
+            {
+                Type = "object",
+                Properties = new Dictionary<string, Microsoft.OpenApi.Models.OpenApiSchema>
+                {
+                    ["type"] = new Microsoft.OpenApi.Models.OpenApiSchema { Type = "string" },
+                    ["title"] = new Microsoft.OpenApi.Models.OpenApiSchema { Type = "string" },
+                    ["status"] = new Microsoft.OpenApi.Models.OpenApiSchema { Type = "integer" },
+                    ["detail"] = new Microsoft.OpenApi.Models.OpenApiSchema { Type = "string" },
+                    ["instance"] = new Microsoft.OpenApi.Models.OpenApiSchema { Type = "string" },
+                    ["extensions"] = new Microsoft.OpenApi.Models.OpenApiSchema 
+                    { 
+                        Type = "object",
+                        AdditionalPropertiesAllowed = true
+                    }
                 }
             });
         });

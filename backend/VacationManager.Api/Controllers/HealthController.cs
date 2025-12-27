@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Asp.Versioning;
+using VacationManager.Api.Filters;
 
 namespace VacationManager.Api.Controllers
 {
     [ApiController]
     [Route("")]
     [ApiVersionNeutral]
+    [DisableApiResponseWrapper]
     public class HealthController : ControllerBase
     {
         private readonly IWebHostEnvironment _environment;

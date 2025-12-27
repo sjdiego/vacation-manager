@@ -2,6 +2,7 @@ using Xunit;
 using NSubstitute;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using VacationManager.Api.Controllers;
 using VacationManager.Api.Services;
@@ -99,7 +100,8 @@ public class TeamsControllerTests
         var result = await _controller.Create(createDto);
 
         // Assert
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]
@@ -142,7 +144,8 @@ public class TeamsControllerTests
         var result = await _controller.Update(teamId, updateDto);
 
         // Assert
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]
@@ -186,7 +189,8 @@ public class TeamsControllerTests
         var result = await _controller.Delete(teamId);
 
         // Assert
-        Assert.IsType<BadRequestObjectResult>(result);
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]
