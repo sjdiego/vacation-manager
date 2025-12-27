@@ -11,9 +11,9 @@ on:
       - '.github/workflows/deploy-frontend.yml'
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
-    name: Build
+    name: Build and Deploy to Production
     environment: production
     steps:
     - uses: actions/checkout@v4
@@ -39,23 +39,6 @@ jobs:
     - name: Build
       working-directory: ./frontend
       run: npm run build:prod
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: frontend-build
-        path: frontend/dist/vacation-manager-frontend
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    name: Deploy to Production
-    steps:
-    - name: Download artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: frontend-build
-        path: frontend/dist/vacation-manager-frontend
 
     - name: Replace environment placeholders
       working-directory: frontend/dist/vacation-manager-frontend
