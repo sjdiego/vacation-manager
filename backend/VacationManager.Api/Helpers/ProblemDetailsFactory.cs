@@ -22,7 +22,7 @@ public static class ProblemDetailsFactory
             Title = title ?? "Bad Request",
             Status = StatusCodes.Status400BadRequest,
             Detail = detail,
-            Instance = instance ?? string.Empty
+            Instance = instance
         };
 
         if (extensions != null || !string.IsNullOrEmpty(traceId))
@@ -58,7 +58,7 @@ public static class ProblemDetailsFactory
             Title = title ?? "Not Found",
             Status = StatusCodes.Status404NotFound,
             Detail = detail,
-            Instance = instance ?? string.Empty
+            Instance = instance
         };
 
         if (!string.IsNullOrEmpty(traceId))
@@ -84,7 +84,7 @@ public static class ProblemDetailsFactory
             Title = title ?? "Forbidden",
             Status = StatusCodes.Status403Forbidden,
             Detail = detail,
-            Instance = instance ?? string.Empty
+            Instance = instance
         };
 
         if (!string.IsNullOrEmpty(traceId))
@@ -110,7 +110,7 @@ public static class ProblemDetailsFactory
             Title = title ?? "Conflict",
             Status = StatusCodes.Status409Conflict,
             Detail = detail,
-            Instance = instance ?? string.Empty
+            Instance = instance
         };
 
         if (!string.IsNullOrEmpty(traceId))
@@ -136,7 +136,7 @@ public static class ProblemDetailsFactory
             Title = title ?? "Unauthorized",
             Status = StatusCodes.Status401Unauthorized,
             Detail = detail,
-            Instance = instance ?? string.Empty
+            Instance = instance
         };
 
         if (!string.IsNullOrEmpty(traceId))
@@ -163,7 +163,7 @@ public static class ProblemDetailsFactory
             Title = title ?? "An error occurred while processing your request",
             Status = StatusCodes.Status500InternalServerError,
             Detail = detail,
-            Instance = instance ?? string.Empty
+            Instance = instance
         };
 
         if (extensions != null || !string.IsNullOrEmpty(traceId))

@@ -27,7 +27,8 @@ public class ApiResponseWrapperFilter : IActionFilter
             return;
         }
 
-        // Skip CreatedAtActionResult and CreatedAtRouteResult to preserve Location header
+        // Skip CreatedAtActionResult and CreatedAtRouteResult to preserve their REST semantics
+        // and specific result format (these results already have their own specific structure)
         if (context.Result is CreatedAtActionResult or CreatedAtRouteResult)
         {
             return;
@@ -58,6 +59,10 @@ public class ApiResponseWrapperFilter : IActionFilter
         }
     }
 
+    /// <summary>
+    /// Checks if a value is already wrapped in an ApiResponse.
+    /// Note: This method assumes the value parameter is not null (caller checks this).
+    /// </summary>
     private static bool IsAlreadyWrapped(object value)
     {
         var type = value.GetType();
