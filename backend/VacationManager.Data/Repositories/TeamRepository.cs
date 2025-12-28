@@ -28,6 +28,15 @@ public class TeamRepository : ITeamRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Team>> GetByUserAsync(Guid userId)
+    {
+        return await _context.Teams
+            .Include(t => t.Members)
+            .Where(t => t.Members.Any(m => m.Id == userId))
+            .OrderBy(t => t.Name)
+            .ToListAsync();
+    }
+
     public async Task<Team> CreateAsync(Team team)
     {
         _context.Teams.Add(team);

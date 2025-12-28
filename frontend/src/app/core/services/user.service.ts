@@ -36,7 +36,7 @@ export class UserService {
       return of(cachedUser);
     }
 
-    if (!this.currentUserCache$ || !isCacheValid) {
+    if (!this.currentUserCache$) {
       this.currentUserCache$ = this.apiService.get<UserDto>(`${this.endpoint}/me`).pipe(
         tap(user => {
           this.currentUserSubject.next(user);

@@ -8,8 +8,11 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using VacationManager.Data;
 using VacationManager.Core.Interfaces;
 using VacationManager.Core.Validators;
+using VacationManager.Core.Validation;
+using VacationManager.Core.Validation.Rules;
 using VacationManager.Data.Repositories;
 using VacationManager.Api.Services;
+using VacationManager.Api.Helpers;
 using VacationManager.Api.Configuration;
 
 namespace VacationManager.Api.Extensions;
@@ -30,6 +33,18 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<IClaimExtractorService, ClaimExtractorService>();
+        services.AddSingleton<IGitVersionService, GitVersionService>();
+        
+        // Register validation rules
+        services.AddScoped<IVacationValidationRule, TeamMembershipValidationRule>();
+        services.AddScoped<IVacationValidationRule, VacationOverlapValidationRule>();
+        
+        // Register validation service
+        services.AddScoped<IVacationValidationService, VacationValidationService>();
+        
+        // Register authorization service
+        services.AddScoped<VacationManager.Core.Authorization.AuthorizationService>();
+        services.AddScoped<IAuthorizationHelper, AuthorizationHelper>();
         
         return services;
     }

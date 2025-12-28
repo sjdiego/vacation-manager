@@ -60,20 +60,66 @@ export class VacationService {
 
   constructor(private apiService: ApiService) {}
 
+  private mapVacationType(type: string | number): VacationType {
+    if (typeof type === 'number') return type;
+    const typeMap: { [key: string]: VacationType } = {
+      'Vacation': VacationType.Vacation,
+      'SickLeave': VacationType.SickLeave,
+      'PersonalDay': VacationType.PersonalDay,
+      'CompensatoryTime': VacationType.CompensatoryTime,
+      'Other': VacationType.Other
+    };
+    return typeMap[type] ?? VacationType.Other;
+  }
+
+  private mapVacationStatus(status: string | number): VacationStatus {
+    if (typeof status === 'number') return status;
+    const statusMap: { [key: string]: VacationStatus } = {
+      'Pending': VacationStatus.Pending,
+      'Approved': VacationStatus.Approved,
+      'Rejected': VacationStatus.Rejected,
+      'Cancelled': VacationStatus.Cancelled
+    };
+    return statusMap[status] ?? VacationStatus.Pending;
+  }
+
+  private normalizeVacation(vacation: any): VacationDto {
+    return {
+      id: vacation.id,
+      userId: vacation.userId,
+      userName: vacation.userName,
+      type: this.mapVacationType(vacation.type),
+      status: this.mapVacationStatus(vacation.status),
+      startDate: new Date(vacation.startDate),
+      endDate: new Date(vacation.endDate),
+      notes: vacation.notes,
+      createdAt: new Date(vacation.createdAt),
+      updatedAt: new Date(vacation.updatedAt)
+    };
+  }
+
   getMyVacations(): Observable<VacationDto[]> {
-    return this.apiService.get<VacationDto[]>(this.endpoint);
+    return this.apiService.get<any[]>(this.endpoint).pipe(
+      map(vacations => vacations.map(v => this.normalizeVacation(v)))
+    );
   }
 
   getVacationById(id: string): Observable<VacationDto> {
-    return this.apiService.get<VacationDto>(`${this.endpoint}/${id}`);
+    return this.apiService.get<any>(`${this.endpoint}/${id}`).pipe(
+      map(vacation => this.normalizeVacation(vacation))
+    );
   }
 
   createVacation(vacation: CreateVacationDto): Observable<VacationDto> {
-    return this.apiService.post<VacationDto>(this.endpoint, vacation);
+    return this.apiService.post<any>(this.endpoint, vacation).pipe(
+      map(v => this.normalizeVacation(v))
+    );
   }
 
   updateVacation(id: string, vacation: UpdateVacationDto): Observable<VacationDto> {
-    return this.apiService.put<VacationDto>(`${this.endpoint}/${id}`, vacation);
+    return this.apiService.put<any>(`${this.endpoint}/${id}`, vacation).pipe(
+      map(v => this.normalizeVacation(v))
+    );
   }
 
   deleteVacation(id: string): Observable<void> {
@@ -99,7 +145,8 @@ export class VacationService {
       options['endDate'] = endDate.toISOString();
     }
     
-    const data$ = this.apiService.get<VacationDto[]>(`${this.endpoint}/team`, options as any).pipe(
+    const data$ = this.apiService.get<any[]>(`${this.endpoint}/team`, options as any).pipe(
+      map(vacations => vacations.map(v => this.normalizeVacation(v))),
       shareReplay(1)
     );
     
@@ -120,15 +167,21 @@ export class VacationService {
   }
 
   getTeamPendingVacations(): Observable<VacationDto[]> {
-    return this.apiService.get<VacationDto[]>(`${this.endpoint}/team/pending`);
+    return this.apiService.get<any[]>(`${this.endpoint}/team/pending`).pipe(
+      map(vacations => vacations.map(v => this.normalizeVacation(v)))
+    );
   }
 
   approveVacation(id: string, approved: boolean, rejectReason?: string): Observable<VacationDto> {
     const dto: ApproveVacationDto = { approved, rejectReason };
-    return this.apiService.post<VacationDto>(`${this.endpoint}/${id}/approve`, dto);
+    return this.apiService.post<any>(`${this.endpoint}/${id}/approve`, dto).pipe(
+      map(v => this.normalizeVacation(v))
+    );
   }
 
   cancelVacation(id: string): Observable<VacationDto> {
-    return this.apiService.post<VacationDto>(`${this.endpoint}/${id}/cancel`, {});
+    return this.apiService.post<any>(`${this.endpoint}/${id}/cancel`, {}).pipe(
+      map(v => this.normalizeVacation(v))
+    );
   }
 }

@@ -5,7 +5,6 @@ import { AuthService, User } from '@app/core/services/auth.service';
 import { ToastService } from '@app/core/services/toast.service';
 import { UserService, UserDto } from '@app/core/services/user.service';
 
-const BUILD_TIMESTAMP = new Date().toISOString();
 
 @Component({
   selector: 'app-root',
@@ -25,36 +24,38 @@ export class AppComponent implements OnInit {
     private toastService: ToastService,
     private router: Router
   ) {
-    console.log('App built at:', BUILD_TIMESTAMP);
   }
 
   ngOnInit(): void {
     this.authService.restoreUserState();
-    
+
     const storedUser = this.authService.getStoredUser();
     if (storedUser) {
       this.currentUser = storedUser;
-      this.loadUserDetails();
       if (this.router.url === '/login') {
         this.router.navigate(['/vacations']);
       }
     }
 
+    // Subscribe to auth changes
     this.authService.currentUser$.subscribe((user) => {
       this.currentUser = user;
-      if (user) {
-        this.loadUserDetails();
-      }
     });
-  }
 
-  loadUserDetails(): void {
+    // Load user details once and subscribe to updates
     this.userService.getCurrentUser().subscribe({
       next: (userDto) => {
         this.currentUserDto = userDto;
       },
       error: (error) => {
         console.error('Failed to load user details:', error);
+      }
+    });
+
+    // Subscribe to user details updates (e.g., team changes)
+    this.userService.currentUser$.subscribe((user) => {
+      if (user) {
+        this.currentUserDto = user;
       }
     });
   }
@@ -67,4 +68,3 @@ export class AppComponent implements OnInit {
     });
   }
 }
-

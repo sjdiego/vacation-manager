@@ -36,6 +36,7 @@ public class UpdateVacationDtoValidator : AbstractValidator<UpdateVacationDto>
             .GreaterThanOrEqualTo(x => x.StartDate).WithMessage("End date must be after or equal to start date");
 
         RuleFor(x => x.Type)
+            .NotNull().WithMessage("Vacation type is required")
             .IsInEnum().WithMessage("Vacation type is invalid");
 
         RuleFor(x => x.Notes)

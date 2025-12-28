@@ -7,6 +7,7 @@ using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
 using VacationManager.Api.Services;
 using VacationManager.Api.Extensions;
+using VacationManager.Api.Helpers;
 
 namespace VacationManager.Api.Controllers;
 
@@ -21,7 +22,7 @@ public class TeamsController : ControllerBase
     private readonly IUserRepository _userRepository;
     private readonly IMapper _mapper;
     private readonly ILogger<TeamsController> _logger;
-    private readonly IClaimExtractorService _claimExtractor;
+    private readonly IAuthorizationHelper _authHelper;
 
     public TeamsController(
         ITeamRepository teamRepository,
@@ -29,26 +30,38 @@ public class TeamsController : ControllerBase
         IUserRepository userRepository,
         IMapper mapper,
         ILogger<TeamsController> logger,
-        IClaimExtractorService claimExtractor)
+        IAuthorizationHelper authHelper)
     {
         _teamRepository = teamRepository;
         _vacationRepository = vacationRepository;
         _userRepository = userRepository;
         _mapper = mapper;
         _logger = logger;
-        _claimExtractor = claimExtractor;
+        _authHelper = authHelper;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TeamDto>>> GetAll()
     {
-        var teams = await _teamRepository.GetAllAsync();
+        var user = await _authHelper.GetCurrentUserAsync(User);
+        if (user == null)
+            return Unauthorized();
+
+        // Managers can see all teams, regular users only see their teams
+        IEnumerable<Team> teams = user.IsManager
+            ? await _teamRepository.GetAllAsync()
+            : await _teamRepository.GetByUserAsync(user.Id);
+
         return Ok(_mapper.Map<List<TeamDto>>(teams));
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<TeamDto>> GetById(Guid id)
     {
+        var (_, authResult) = await _authHelper.EnsureTeamMemberOrManagerAsync(User, id);
+        if (!authResult.IsAuthorized)
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
+
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)
             return NotFound();
@@ -81,13 +94,9 @@ public class TeamsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<TeamDto>> Create(CreateTeamDto dto)
     {
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(userEntraId))
-            return Unauthorized();
-
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        if (user == null || !user.IsManager)
-            return this.ForbiddenProblem("Only managers can create teams");
+        var (manager, authResult) = await _authHelper.EnsureManagerAsync(User);
+        if (!authResult.IsAuthorized)
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
         var team = new Team
         {
@@ -97,7 +106,7 @@ public class TeamsController : ControllerBase
         };
 
         var created = await _teamRepository.CreateAsync(team);
-        _logger.LogInformation("Team created: {TeamId} by manager {UserId}", created.Id, user.Id);
+        _logger.LogInformation("Team created: {TeamId} by manager {UserId}", created.Id, manager!.Id);
 
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, _mapper.Map<TeamDto>(created));
     }
@@ -105,13 +114,9 @@ public class TeamsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<TeamDto>> Update(Guid id, UpdateTeamDto dto)
     {
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(userEntraId))
-            return Unauthorized();
-
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        if (user == null || !user.IsManager)
-            return this.ForbiddenProblem("Only managers can update teams");
+        var (_, authResult) = await _authHelper.EnsureManagerAsync(User);
+        if (!authResult.IsAuthorized)
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)
@@ -131,20 +136,16 @@ public class TeamsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(userEntraId))
-            return Unauthorized();
-
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        if (user == null || !user.IsManager)
-            return this.ForbiddenProblem("Only managers can delete teams");
+        var (manager, authResult) = await _authHelper.EnsureManagerAsync(User);
+        if (!authResult.IsAuthorized)
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)
             return NotFound();
 
         await _teamRepository.DeleteAsync(id);
-        _logger.LogInformation("Team deleted: {TeamId} by manager {UserId}", id, user.Id);
+        _logger.LogInformation("Team deleted: {TeamId} by manager {UserId}", id, manager!.Id);
 
         return NoContent();
     }

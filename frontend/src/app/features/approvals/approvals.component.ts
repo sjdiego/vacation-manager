@@ -39,12 +39,12 @@ export class ApprovalsComponent implements OnInit, OnDestroy {
   }
 
   private loadCurrentUser(): void {
-    this.userService.getCurrentUser()
+    this.userService.currentUser$
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (user) => {
           this.currentUser = user;
-          if (user.isManager) {
+          if (user && user.isManager) {
             this.loadPendingVacations();
           } else {
             this.toastService.error('Only managers can approve vacations');

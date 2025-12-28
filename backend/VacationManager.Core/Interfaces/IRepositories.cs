@@ -32,6 +32,7 @@ public interface ITeamRepository
 {
     Task<Team?> GetByIdAsync(Guid id);
     Task<IEnumerable<Team>> GetAllAsync();
+    Task<IEnumerable<Team>> GetByUserAsync(Guid userId);
     Task<Team> CreateAsync(Team team);
     Task<Team> UpdateAsync(Team team);
     Task DeleteAsync(Guid id);

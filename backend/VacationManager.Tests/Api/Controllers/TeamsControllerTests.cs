@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using VacationManager.Api.Controllers;
 using VacationManager.Api.Services;
+using VacationManager.Api.Helpers;
 using VacationManager.Core.DTOs;
 using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
@@ -19,7 +20,7 @@ public class TeamsControllerTests
     private readonly IUserRepository _userRepository;
     private readonly IMapper _mapper;
     private readonly ILogger<TeamsController> _logger;
-    private readonly IClaimExtractorService _claimExtractor;
+    private readonly IAuthorizationHelper _authHelper;
     private readonly TeamsController _controller;
 
     public TeamsControllerTests()
@@ -29,17 +30,20 @@ public class TeamsControllerTests
         _userRepository = Substitute.For<IUserRepository>();
         _mapper = Substitute.For<IMapper>();
         _logger = Substitute.For<ILogger<TeamsController>>();
-        _claimExtractor = Substitute.For<IClaimExtractorService>();
-        _controller = new TeamsController(_teamRepository, _vacationRepository, _userRepository, _mapper, _logger, _claimExtractor);
+        _authHelper = Substitute.For<IAuthorizationHelper>();
+        _controller = new TeamsController(_teamRepository, _vacationRepository, _userRepository, _mapper, _logger, _authHelper);
     }
 
     [Fact]
     public async Task GetAll_ReturnsAllTeams()
     {
         // Arrange
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId, EntraId = "user123", Email = "user@test.com", DisplayName = "Test User", IsManager = true };
         var teams = new List<Team> { new Team { Id = Guid.NewGuid(), Name = "Engineering" }, new Team { Id = Guid.NewGuid(), Name = "Marketing" } };
         var teamDtos = new List<TeamDto> { new TeamDto(), new TeamDto() };
 
+        _authHelper.GetCurrentUserAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>()).Returns(user);
         _teamRepository.GetAllAsync().Returns(teams);
         _mapper.Map<List<TeamDto>>(teams).Returns(teamDtos);
 
@@ -57,9 +61,12 @@ public class TeamsControllerTests
     {
         // Arrange
         var teamId = Guid.NewGuid();
+        var user = new User { Id = Guid.NewGuid(), EntraId = "user123", Email = "user@test.com", DisplayName = "Test User", TeamId = teamId };
         var team = new Team { Id = teamId, Name = "Engineering" };
         var teamDto = new TeamDto { Id = teamId, Name = "Engineering" };
 
+        _authHelper.EnsureTeamMemberOrManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>(), teamId)
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Success()));
         _teamRepository.GetByIdAsync(teamId).Returns(team);
         _mapper.Map<TeamDto>(team).Returns(teamDto);
 
@@ -76,6 +83,10 @@ public class TeamsControllerTests
     {
         // Arrange
         var teamId = Guid.NewGuid();
+        var user = new User { Id = Guid.NewGuid(), EntraId = "user123", Email = "user@test.com", DisplayName = "Test User", TeamId = teamId };
+        
+        _authHelper.EnsureTeamMemberOrManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>(), teamId)
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Success()));
         _teamRepository.GetByIdAsync(teamId).Returns((Team?)null);
 
         // Act
@@ -89,12 +100,11 @@ public class TeamsControllerTests
     public async Task Create_WithNonManager_ReturnsBadRequest()
     {
         // Arrange
-        var managerId = "user-entra-id";
-        var user = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "user@example.com", DisplayName = "User", IsManager = false };
+        var user = new User { Id = Guid.NewGuid(), EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", IsManager = false };
         var createDto = new CreateTeamDto { Name = "Engineering", Description = "Software team" };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
-        _userRepository.GetByEntraIdAsync(managerId).Returns(user);
+        _authHelper.EnsureManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Failure("User is not a manager")));
 
         // Act
         var result = await _controller.Create(createDto);
@@ -108,14 +118,13 @@ public class TeamsControllerTests
     public async Task Create_WithManager_CreatesTeam()
     {
         // Arrange
-        var managerId = "manager-entra-id";
-        var manager = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
+        var manager = new User { Id = Guid.NewGuid(), EntraId = "manager-entra-id", Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
         var createDto = new CreateTeamDto { Name = "Engineering", Description = "Software team" };
         var createdTeam = new Team { Id = Guid.NewGuid(), Name = createDto.Name, Description = createDto.Description };
         var teamDto = new TeamDto { Id = createdTeam.Id, Name = createdTeam.Name };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
-        _userRepository.GetByEntraIdAsync(managerId).Returns(manager);
+        _authHelper.EnsureManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((manager, VacationManager.Core.Authorization.AuthorizationResult.Success()));
         _teamRepository.CreateAsync(Arg.Any<Team>()).Returns(createdTeam);
         _mapper.Map<TeamDto>(createdTeam).Returns(teamDto);
 
@@ -133,12 +142,11 @@ public class TeamsControllerTests
     {
         // Arrange
         var teamId = Guid.NewGuid();
-        var managerId = "user-entra-id";
-        var user = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "user@example.com", DisplayName = "User", IsManager = false };
+        var user = new User { Id = Guid.NewGuid(), EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", IsManager = false };
         var updateDto = new UpdateTeamDto { Name = "Updated Engineering", Description = "New" };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
-        _userRepository.GetByEntraIdAsync(managerId).Returns(user);
+        _authHelper.EnsureManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Failure("User is not a manager")));
 
         // Act
         var result = await _controller.Update(teamId, updateDto);
@@ -153,15 +161,14 @@ public class TeamsControllerTests
     {
         // Arrange
         var teamId = Guid.NewGuid();
-        var managerId = "manager-entra-id";
-        var manager = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
+        var manager = new User { Id = Guid.NewGuid(), EntraId = "manager-entra-id", Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
         var team = new Team { Id = teamId, Name = "Engineering", Description = "Old" };
         var updateDto = new UpdateTeamDto { Name = "Updated Engineering", Description = "New" };
         var updatedTeam = new Team { Id = teamId, Name = updateDto.Name, Description = updateDto.Description };
         var teamDto = new TeamDto { Id = teamId, Name = updatedTeam.Name };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
-        _userRepository.GetByEntraIdAsync(managerId).Returns(manager);
+        _authHelper.EnsureManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((manager, VacationManager.Core.Authorization.AuthorizationResult.Success()));
         _teamRepository.GetByIdAsync(teamId).Returns(team);
         _teamRepository.UpdateAsync(Arg.Any<Team>()).Returns(updatedTeam);
         _mapper.Map<TeamDto>(updatedTeam).Returns(teamDto);
@@ -179,11 +186,10 @@ public class TeamsControllerTests
     {
         // Arrange
         var teamId = Guid.NewGuid();
-        var managerId = "user-entra-id";
-        var user = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "user@example.com", DisplayName = "User", IsManager = false };
+        var user = new User { Id = Guid.NewGuid(), EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", IsManager = false };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
-        _userRepository.GetByEntraIdAsync(managerId).Returns(user);
+        _authHelper.EnsureManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Failure("User is not a manager")));
 
         // Act
         var result = await _controller.Delete(teamId);
@@ -198,12 +204,11 @@ public class TeamsControllerTests
     {
         // Arrange
         var teamId = Guid.NewGuid();
-        var managerId = "manager-entra-id";
-        var manager = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
+        var manager = new User { Id = Guid.NewGuid(), EntraId = "manager-entra-id", Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
         var team = new Team { Id = teamId, Name = "Engineering" };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
-        _userRepository.GetByEntraIdAsync(managerId).Returns(manager);
+        _authHelper.EnsureManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((manager, VacationManager.Core.Authorization.AuthorizationResult.Success()));
         _teamRepository.GetByIdAsync(teamId).Returns(team);
 
         // Act

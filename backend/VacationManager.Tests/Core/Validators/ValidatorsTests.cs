@@ -107,6 +107,27 @@ public class VacationValidatorsTests
     }
 
     [Fact]
+    public void UpdateVacationDtoValidator_WithNullType_Fails()
+    {
+        // Arrange
+        var validator = new UpdateVacationDtoValidator();
+        var dto = new UpdateVacationDto
+        {
+            StartDate = DateTime.UtcNow.AddDays(1),
+            EndDate = DateTime.UtcNow.AddDays(6),
+            Type = null,
+            Notes = "Updated notes"
+        };
+
+        // Act
+        var result = validator.Validate(dto);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == "Type" && e.ErrorMessage == "Vacation type is required");
+    }
+
+    [Fact]
     public void ApproveVacationDtoValidator_WithApproval_Passes()
     {
         // Arrange

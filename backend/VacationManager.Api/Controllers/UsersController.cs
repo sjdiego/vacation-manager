@@ -7,6 +7,7 @@ using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
 using VacationManager.Api.Services;
 using VacationManager.Api.Extensions;
+using VacationManager.Api.Helpers;
 
 namespace VacationManager.Api.Controllers;
 
@@ -20,17 +21,20 @@ public class UsersController : ControllerBase
     private readonly IMapper _mapper;
     private readonly ILogger<UsersController> _logger;
     private readonly IClaimExtractorService _claimExtractor;
+    private readonly IAuthorizationHelper _authHelper;
 
     public UsersController(
         IUserRepository userRepository,
         IMapper mapper,
         ILogger<UsersController> logger,
-        IClaimExtractorService claimExtractor)
+        IClaimExtractorService claimExtractor,
+        IAuthorizationHelper authHelper)
     {
         _userRepository = userRepository;
         _mapper = mapper;
         _logger = logger;
         _claimExtractor = claimExtractor;
+        _authHelper = authHelper;
     }
 
     [HttpGet("me")]
@@ -38,9 +42,11 @@ public class UsersController : ControllerBase
     {
         var userEntraId = _claimExtractor.GetEntraId(User);
         if (string.IsNullOrEmpty(userEntraId))
-            return Unauthorized();
+            return this.UnauthorizedProblem("User not authenticated");
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
+
+        // If user doesn't exist yet, auto-register
         if (user == null)
         {
             var email = _claimExtractor.GetEmail(User);
@@ -49,7 +55,7 @@ public class UsersController : ControllerBase
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(displayName))
             {
                 _logger.LogWarning("Cannot auto-register user {EntraId}: missing email or display name", userEntraId);
-                return NotFound();
+                return this.NotFoundProblem("User not found and cannot be auto-registered");
             }
 
             // Check if this is the first user in the system
@@ -70,11 +76,11 @@ public class UsersController : ControllerBase
             user = await _userRepository.CreateAsync(user);
             if (isFirstUser)
             {
-                _logger.LogInformation("First user auto-registered as manager: {UserId} with EntraId: {EntraId} and email: {Email}", user.Id, userEntraId, email);
+                _logger.LogInformation("First user auto-registered as manager: {UserId} with EntraId: {EntraId}", user.Id, userEntraId);
             }
             else
             {
-                _logger.LogInformation("User auto-registered: {UserId} with EntraId: {EntraId} and email: {Email}", user.Id, userEntraId, email);
+                _logger.LogInformation("User auto-registered: {UserId} with EntraId: {EntraId}", user.Id, userEntraId);
             }
         }
 
@@ -84,13 +90,9 @@ public class UsersController : ControllerBase
     [HttpPost("team/{teamId}")]
     public async Task<ActionResult<UserDto>> AddToTeam(Guid teamId)
     {
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(userEntraId))
-            return Unauthorized();
-
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        if (user == null)
-            return NotFound("User not found");
+        var (user, authResult) = await _authHelper.EnsureAuthenticatedAsync(User);
+        if (!authResult.IsAuthorized || user == null)
+            return this.UnauthorizedProblem(authResult.FailureReason ?? "Unauthorized");
 
         if (user.TeamId == teamId)
             return this.ConflictProblem("User is already member of this team");
@@ -107,15 +109,11 @@ public class UsersController : ControllerBase
     [HttpDelete("team")]
     public async Task<ActionResult<UserDto>> RemoveFromTeam()
     {
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(userEntraId))
-            return Unauthorized();
+        var (user, authResult) = await _authHelper.EnsureAuthenticatedAsync(User);
+        if (!authResult.IsAuthorized)
+            return this.UnauthorizedProblem(authResult.FailureReason ?? "Unauthorized");
 
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        if (user == null)
-            return NotFound("User not found");
-
-        if (user.TeamId == null)
+        if (user!.TeamId == null)
             return this.BadRequestProblem("User is not member of any team");
 
         var previousTeamId = user.TeamId;
@@ -141,13 +139,9 @@ public class UsersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<UserDto>>> GetAll()
     {
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(userEntraId))
-            return Unauthorized();
-
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        if (user == null || !user.IsManager)
-            return this.ForbiddenProblem("Only managers can view all users");
+        var (_, authResult) = await _authHelper.EnsureManagerAsync(User);
+        if (!authResult.IsAuthorized)
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
         var users = await _userRepository.GetAllAsync();
         return Ok(_mapper.Map<List<UserDto>>(users));
@@ -156,13 +150,9 @@ public class UsersController : ControllerBase
     [HttpPut("{id}/team/{teamId}")]
     public async Task<ActionResult<UserDto>> AssignUserToTeam(Guid id, Guid teamId)
     {
-        var managerEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(managerEntraId))
-            return Unauthorized();
-
-        var manager = await _userRepository.GetByEntraIdAsync(managerEntraId);
-        if (manager == null || !manager.IsManager)
-            return this.ForbiddenProblem("Only managers can assign users to teams");
+        var (manager, authResult) = await _authHelper.EnsureManagerAsync(User);
+        if (!authResult.IsAuthorized)
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null)
@@ -175,7 +165,7 @@ public class UsersController : ControllerBase
         user.UpdatedAt = DateTime.UtcNow;
         
         var updated = await _userRepository.UpdateAsync(user);
-        _logger.LogInformation("User {UserId} assigned to team {TeamId} by manager {ManagerId}", user.Id, teamId, manager.Id);
+        _logger.LogInformation("User {UserId} assigned to team {TeamId} by manager {ManagerId}", user.Id, teamId, manager!.Id);
 
         return Ok(_mapper.Map<UserDto>(updated));
     }
@@ -183,13 +173,9 @@ public class UsersController : ControllerBase
     [HttpDelete("{id}/team")]
     public async Task<ActionResult<UserDto>> RemoveUserFromTeam(Guid id)
     {
-        var managerEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(managerEntraId))
-            return Unauthorized();
-
-        var manager = await _userRepository.GetByEntraIdAsync(managerEntraId);
-        if (manager == null || !manager.IsManager)
-            return this.ForbiddenProblem("Only managers can remove users from teams");
+        var (manager, authResult) = await _authHelper.EnsureManagerAsync(User);
+        if (!authResult.IsAuthorized)
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null)
@@ -203,7 +189,7 @@ public class UsersController : ControllerBase
         user.UpdatedAt = DateTime.UtcNow;
         
         var updated = await _userRepository.UpdateAsync(user);
-        _logger.LogInformation("User {UserId} removed from team {TeamId} by manager {ManagerId}", user.Id, previousTeamId, manager.Id);
+        _logger.LogInformation("User {UserId} removed from team {TeamId} by manager {ManagerId}", user.Id, previousTeamId, manager!.Id);
 
         return Ok(_mapper.Map<UserDto>(updated));
     }
@@ -211,16 +197,9 @@ public class UsersController : ControllerBase
      [HttpGet("team/{teamId}")]
      public async Task<ActionResult<IEnumerable<UserDto>>> GetByTeam(Guid teamId)
      {
-         var userEntraId = _claimExtractor.GetEntraId(User);
-         if (string.IsNullOrEmpty(userEntraId))
-             return Unauthorized();
-
-         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-         if (user == null || user.TeamId == null)
-             return this.BadRequestProblem("User must be part of a team");
-
-         if (user.TeamId != teamId && !user.IsManager)
-             return this.ForbiddenProblem("Can only view users from your own team");
+         var (_, authResult) = await _authHelper.EnsureTeamMemberOrManagerAsync(User, teamId);
+         if (!authResult.IsAuthorized)
+             return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
          var users = await _userRepository.GetByTeamAsync(teamId);
          return Ok(_mapper.Map<List<UserDto>>(users));

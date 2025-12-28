@@ -6,6 +6,7 @@ namespace VacationManager.Api.Helpers;
 
 /// <summary>
 /// Factory for creating RFC 7807 Problem Details responses
+/// Legacy API - consider using ProblemDetailsBuilder for more flexibility
 /// </summary>
 public static class ProblemDetailsFactory
 {
@@ -16,34 +17,27 @@ public static class ProblemDetailsFactory
         Dictionary<string, object>? extensions = null,
         string? traceId = null)
     {
-        var problemDetails = new ProblemDetails
-        {
-            Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1",
-            Title = title ?? "Bad Request",
-            Status = StatusCodes.Status400BadRequest,
-            Detail = detail,
-            Instance = instance
-        };
+        var builder = ProblemDetailsBuilder.BadRequest()
+            .WithDetail(detail);
 
-        if (extensions != null || !string.IsNullOrEmpty(traceId))
-        {
-            problemDetails.Extensions = new Dictionary<string, object?>();
-            
-            if (extensions != null)
-            {
-                foreach (var kvp in extensions)
-                {
-                    problemDetails.Extensions[kvp.Key] = kvp.Value;
-                }
-            }
+        if (!string.IsNullOrEmpty(title))
+            builder = builder.WithTitle(title);
 
-            if (!string.IsNullOrEmpty(traceId))
+        if (!string.IsNullOrEmpty(instance))
+            builder = builder.WithInstance(instance);
+
+        if (extensions != null)
+        {
+            foreach (var kvp in extensions)
             {
-                problemDetails.Extensions["traceId"] = traceId;
+                builder = builder.WithExtension(kvp.Key, kvp.Value);
             }
         }
 
-        return problemDetails;
+        if (!string.IsNullOrEmpty(traceId))
+            builder = builder.WithTraceId(traceId);
+
+        return builder.Build();
     }
 
     public static ProblemDetails CreateNotFound(
@@ -52,24 +46,19 @@ public static class ProblemDetailsFactory
         string? instance = null,
         string? traceId = null)
     {
-        var problemDetails = new ProblemDetails
-        {
-            Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4",
-            Title = title ?? "Not Found",
-            Status = StatusCodes.Status404NotFound,
-            Detail = detail,
-            Instance = instance
-        };
+        var builder = ProblemDetailsBuilder.NotFound()
+            .WithDetail(detail);
+
+        if (!string.IsNullOrEmpty(title))
+            builder = builder.WithTitle(title);
+
+        if (!string.IsNullOrEmpty(instance))
+            builder = builder.WithInstance(instance);
 
         if (!string.IsNullOrEmpty(traceId))
-        {
-            problemDetails.Extensions = new Dictionary<string, object?>
-            {
-                ["traceId"] = traceId
-            };
-        }
+            builder = builder.WithTraceId(traceId);
 
-        return problemDetails;
+        return builder.Build();
     }
 
     public static ProblemDetails CreateForbidden(
@@ -78,24 +67,19 @@ public static class ProblemDetailsFactory
         string? instance = null,
         string? traceId = null)
     {
-        var problemDetails = new ProblemDetails
-        {
-            Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.3",
-            Title = title ?? "Forbidden",
-            Status = StatusCodes.Status403Forbidden,
-            Detail = detail,
-            Instance = instance
-        };
+        var builder = ProblemDetailsBuilder.Forbidden()
+            .WithDetail(detail);
+
+        if (!string.IsNullOrEmpty(title))
+            builder = builder.WithTitle(title);
+
+        if (!string.IsNullOrEmpty(instance))
+            builder = builder.WithInstance(instance);
 
         if (!string.IsNullOrEmpty(traceId))
-        {
-            problemDetails.Extensions = new Dictionary<string, object?>
-            {
-                ["traceId"] = traceId
-            };
-        }
+            builder = builder.WithTraceId(traceId);
 
-        return problemDetails;
+        return builder.Build();
     }
 
     public static ProblemDetails CreateConflict(
@@ -104,24 +88,19 @@ public static class ProblemDetailsFactory
         string? instance = null,
         string? traceId = null)
     {
-        var problemDetails = new ProblemDetails
-        {
-            Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.8",
-            Title = title ?? "Conflict",
-            Status = StatusCodes.Status409Conflict,
-            Detail = detail,
-            Instance = instance
-        };
+        var builder = ProblemDetailsBuilder.Conflict()
+            .WithDetail(detail);
+
+        if (!string.IsNullOrEmpty(title))
+            builder = builder.WithTitle(title);
+
+        if (!string.IsNullOrEmpty(instance))
+            builder = builder.WithInstance(instance);
 
         if (!string.IsNullOrEmpty(traceId))
-        {
-            problemDetails.Extensions = new Dictionary<string, object?>
-            {
-                ["traceId"] = traceId
-            };
-        }
+            builder = builder.WithTraceId(traceId);
 
-        return problemDetails;
+        return builder.Build();
     }
 
     public static ProblemDetails CreateUnauthorized(
@@ -130,24 +109,19 @@ public static class ProblemDetailsFactory
         string? instance = null,
         string? traceId = null)
     {
-        var problemDetails = new ProblemDetails
-        {
-            Type = "https://datatracker.ietf.org/doc/html/rfc7235#section-3.1",
-            Title = title ?? "Unauthorized",
-            Status = StatusCodes.Status401Unauthorized,
-            Detail = detail,
-            Instance = instance
-        };
+        var builder = ProblemDetailsBuilder.Unauthorized()
+            .WithDetail(detail);
+
+        if (!string.IsNullOrEmpty(title))
+            builder = builder.WithTitle(title);
+
+        if (!string.IsNullOrEmpty(instance))
+            builder = builder.WithInstance(instance);
 
         if (!string.IsNullOrEmpty(traceId))
-        {
-            problemDetails.Extensions = new Dictionary<string, object?>
-            {
-                ["traceId"] = traceId
-            };
-        }
+            builder = builder.WithTraceId(traceId);
 
-        return problemDetails;
+        return builder.Build();
     }
 
     public static ProblemDetails CreateInternalServerError(
@@ -157,34 +131,27 @@ public static class ProblemDetailsFactory
         Dictionary<string, object>? extensions = null,
         string? traceId = null)
     {
-        var problemDetails = new ProblemDetails
-        {
-            Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.1",
-            Title = title ?? "An error occurred while processing your request",
-            Status = StatusCodes.Status500InternalServerError,
-            Detail = detail,
-            Instance = instance
-        };
+        var builder = ProblemDetailsBuilder.InternalServerError()
+            .WithDetail(detail);
 
-        if (extensions != null || !string.IsNullOrEmpty(traceId))
-        {
-            problemDetails.Extensions = new Dictionary<string, object?>();
-            
-            if (extensions != null)
-            {
-                foreach (var kvp in extensions)
-                {
-                    problemDetails.Extensions[kvp.Key] = kvp.Value;
-                }
-            }
+        if (!string.IsNullOrEmpty(title))
+            builder = builder.WithTitle(title);
 
-            if (!string.IsNullOrEmpty(traceId))
+        if (!string.IsNullOrEmpty(instance))
+            builder = builder.WithInstance(instance);
+
+        if (extensions != null)
+        {
+            foreach (var kvp in extensions)
             {
-                problemDetails.Extensions["traceId"] = traceId;
+                builder = builder.WithExtension(kvp.Key, kvp.Value);
             }
         }
 
-        return problemDetails;
+        if (!string.IsNullOrEmpty(traceId))
+            builder = builder.WithTraceId(traceId);
+
+        return builder.Build();
     }
 
     /// <summary>

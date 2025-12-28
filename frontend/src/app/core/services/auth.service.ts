@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { PublicClientApplication, AuthenticationResult, Configuration, BrowserCacheLocation } from '@azure/msal-browser';
 import { environment } from '@environments/environment';
+import { CacheService } from './cache.service';
 
 export interface User {
   id: string;
@@ -42,7 +43,7 @@ export class AuthService {
   private initPromise: Promise<void>;
   private loginInProgress = false;
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private cacheService: CacheService) {
     this.pca = new PublicClientApplication(this.msalConfig);
     this.initPromise = this.initMSAL();
   }
@@ -121,6 +122,7 @@ export class AuthService {
   logout(): Promise<void> {
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.userKey);
+    this.cacheService.invalidate('current-user');
     this.currentUserSubject.next(null);
 
     return this.pca.logout({
@@ -158,7 +160,8 @@ export class AuthService {
   }
 
   getCurrentUser(): Observable<User> {
-    return this.http.get<User>(`${environment.apiUrl}/users/me`);
+    const cacheKey = 'current-user';
+    return this.cacheService.cacheRequest(cacheKey, this.http.get<User>(`${environment.apiUrl}/users/me`));
   }
 
   loginWithCredentials(email: string, password: string): Observable<LoginResponse> {

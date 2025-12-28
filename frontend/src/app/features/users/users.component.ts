@@ -38,7 +38,7 @@ export class UsersComponent implements OnInit {
   }
 
   loadCurrentUser(): void {
-    this.userService.getCurrentUser().subscribe({
+    this.userService.currentUser$.subscribe({
       next: (user) => {
         this.currentUser = user;
       },

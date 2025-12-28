@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Asp.Versioning;
 using VacationManager.Api.Filters;
+using VacationManager.Api.Services;
 
 namespace VacationManager.Api.Controllers
 {
@@ -12,10 +13,12 @@ namespace VacationManager.Api.Controllers
     public class HealthController : ControllerBase
     {
         private readonly IWebHostEnvironment _environment;
+        private readonly IGitVersionService _gitVersionService;
 
-        public HealthController(IWebHostEnvironment environment)
+        public HealthController(IWebHostEnvironment environment, IGitVersionService gitVersionService)
         {
             _environment = environment;
+            _gitVersionService = gitVersionService;
         }
 
         /// <summary>
@@ -28,7 +31,7 @@ namespace VacationManager.Api.Controllers
             var response = new
             {
                 message = "Welcome to Vacation Manager API",
-                version = "1.0.0",
+                version = $"1.0.0+{_gitVersionService.GetCommitHash()}",
                 status = "healthy",
                 timestamp = DateTime.UtcNow,
                 documentation = _environment.IsDevelopment() ? "/swagger/index.html" : null
