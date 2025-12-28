@@ -7,6 +7,7 @@ using VacationManager.Api.Controllers;
 using VacationManager.Core.DTOs;
 using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
+using VacationManager.Core.Validation;
 using VacationManager.Api.Services;
 
 namespace VacationManager.Tests.Api.Controllers;
@@ -18,6 +19,7 @@ public class VacationsControllerTests
     private readonly IMapper _mapper;
     private readonly ILogger<VacationsController> _logger;
     private readonly IClaimExtractorService _claimExtractor;
+    private readonly IVacationValidationService _validationService;
     private readonly VacationsController _controller;
 
     public VacationsControllerTests()
@@ -27,12 +29,14 @@ public class VacationsControllerTests
         _mapper = Substitute.For<IMapper>();
         _logger = Substitute.For<ILogger<VacationsController>>();
         _claimExtractor = Substitute.For<IClaimExtractorService>();
+        _validationService = Substitute.For<IVacationValidationService>();
         _controller = new VacationsController(
             _vacationRepository,
             _userRepository,
             _mapper,
             _logger,
-            _claimExtractor);
+            _claimExtractor,
+            _validationService);
     }
 
     [Fact]
@@ -117,6 +121,8 @@ public class VacationsControllerTests
 
         _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
         _userRepository.GetByEntraIdAsync(entraId).Returns(user);
+        _validationService.ValidateAsync(Arg.Any<Vacation>(), Arg.Any<User>())
+            .Returns(VacationManager.Core.Validation.ValidationResult.Failure("User must be part of a team to request vacation", "TEAM_MEMBERSHIP_REQUIRED"));
 
         // Act
         var result = await _controller.Create(createDto);
@@ -143,6 +149,8 @@ public class VacationsControllerTests
         _vacationRepository.GetByUserIdAsync(userId).Returns(new List<Vacation>());
         _vacationRepository.CreateAsync(Arg.Any<Vacation>()).Returns(createdVacation);
         _mapper.Map<VacationDto>(createdVacation).Returns(vacationDto);
+        _validationService.ValidateAsync(Arg.Any<Vacation>(), Arg.Any<User>())
+            .Returns(VacationManager.Core.Validation.ValidationResult.Success());
 
         // Act
         var result = await _controller.Create(createDto);
@@ -166,12 +174,14 @@ public class VacationsControllerTests
         _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
         _userRepository.GetByEntraIdAsync(entraId).Returns(user);
         _vacationRepository.GetByUserIdAsync(userId).Returns(new List<Vacation> { existingVacation });
+        _validationService.ValidateAsync(Arg.Any<Vacation>(), Arg.Any<User>())
+            .Returns(VacationManager.Core.Validation.ValidationResult.Failure("You have overlapping approved vacations in this date range", "VACATION_OVERLAP"));
 
         // Act
         var result = await _controller.Create(createDto);
 
         // Assert
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.IsType<ConflictObjectResult>(result.Result);
         await _vacationRepository.DidNotReceive().CreateAsync(Arg.Any<Vacation>());
     }
 

@@ -5,6 +5,7 @@ using AutoMapper;
 using VacationManager.Core.DTOs;
 using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
+using VacationManager.Core.Validation;
 using VacationManager.Api.Services;
 using VacationManager.Api.Extensions;
 
@@ -21,19 +22,22 @@ public class VacationsController : ControllerBase
     private readonly IMapper _mapper;
     private readonly ILogger<VacationsController> _logger;
     private readonly IClaimExtractorService _claimExtractor;
+    private readonly IVacationValidationService _validationService;
 
     public VacationsController(
         IVacationRepository vacationRepository,
         IUserRepository userRepository,
         IMapper mapper,
         ILogger<VacationsController> logger,
-        IClaimExtractorService claimExtractor)
+        IClaimExtractorService claimExtractor,
+        IVacationValidationService validationService)
     {
         _vacationRepository = vacationRepository;
         _userRepository = userRepository;
         _mapper = mapper;
         _logger = logger;
         _claimExtractor = claimExtractor;
+        _validationService = validationService;
     }
 
     [HttpGet]
@@ -114,18 +118,6 @@ public class VacationsController : ControllerBase
         if (user == null)
             return NotFound("User not found");
 
-        if (user.TeamId == null)
-            return this.BadRequestProblem("User must be part of a team to request vacation");
-
-        var userVacations = await _vacationRepository.GetByUserIdAsync(user.Id);
-        var hasOverlap = userVacations.Any(v => 
-            v.Status == VacationStatus.Approved && 
-            v.StartDate <= dto.EndDate && 
-            v.EndDate >= dto.StartDate);
-
-        if (hasOverlap)
-            return this.ConflictProblem("You have overlapping approved vacations in this date range");
-
         var vacation = new Vacation
         {
             Id = Guid.NewGuid(),
@@ -136,6 +128,17 @@ public class VacationsController : ControllerBase
             Notes = dto.Notes,
             Status = VacationStatus.Pending
         };
+
+        var validationResult = await _validationService.ValidateAsync(vacation, user);
+        if (!validationResult.IsValid)
+        {
+            return validationResult.ErrorCode switch
+            {
+                "TEAM_MEMBERSHIP_REQUIRED" => this.BadRequestProblem(validationResult.ErrorMessage!),
+                "VACATION_OVERLAP" => this.ConflictProblem(validationResult.ErrorMessage!),
+                _ => this.BadRequestProblem(validationResult.ErrorMessage!)
+            };
+        }
 
         var created = await _vacationRepository.CreateAsync(vacation);
         _logger.LogInformation("Vacation created: {VacationId} for user {UserId}", created.Id, user.Id);
