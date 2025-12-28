@@ -141,7 +141,7 @@ public class UsersController : ControllerBase
     {
         var (_, authResult) = await _authHelper.EnsureManagerAsync(User);
         if (!authResult.IsAuthorized)
-            return this.ForbiddenProblem(authResult.FailureReason ?? "Unauthorized");
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
         var users = await _userRepository.GetAllAsync();
         return Ok(_mapper.Map<List<UserDto>>(users));
@@ -152,7 +152,7 @@ public class UsersController : ControllerBase
     {
         var (manager, authResult) = await _authHelper.EnsureManagerAsync(User);
         if (!authResult.IsAuthorized)
-            return this.ForbiddenProblem(authResult.FailureReason ?? "Unauthorized");
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null)
@@ -175,7 +175,7 @@ public class UsersController : ControllerBase
     {
         var (manager, authResult) = await _authHelper.EnsureManagerAsync(User);
         if (!authResult.IsAuthorized)
-            return this.ForbiddenProblem(authResult.FailureReason ?? "Unauthorized");
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null)
