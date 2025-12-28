@@ -72,4 +72,22 @@ public static class ControllerBaseExtensions
 
         return new ConflictObjectResult(problemDetails);
     }
+
+    public static ObjectResult UnauthorizedProblem(
+        this ControllerBase controller,
+        string detail,
+        string? title = null)
+    {
+        var traceId = ProblemDetailsFactory.GetTraceId(controller.HttpContext);
+        var problemDetails = ProblemDetailsFactory.CreateUnauthorized(
+            detail,
+            title,
+            controller.HttpContext?.Request.Path,
+            traceId);
+
+        return new ObjectResult(problemDetails)
+        {
+            StatusCode = StatusCodes.Status401Unauthorized
+        };
+    }
 }

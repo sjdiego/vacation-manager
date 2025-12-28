@@ -44,7 +44,7 @@ public static class ServiceCollectionExtensions
         
         // Register authorization service
         services.AddScoped<VacationManager.Core.Authorization.AuthorizationService>();
-        services.AddScoped<IVacationAuthorizationHelper, VacationAuthorizationHelper>();
+        services.AddScoped<IAuthorizationHelper, AuthorizationHelper>();
         
         return services;
     }

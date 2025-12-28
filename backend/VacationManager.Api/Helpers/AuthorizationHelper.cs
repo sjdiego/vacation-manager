@@ -10,13 +10,13 @@ namespace VacationManager.Api.Helpers;
 /// <summary>
 /// Helper service to simplify authorization checks in controllers
 /// </summary>
-public class VacationAuthorizationHelper : IVacationAuthorizationHelper
+public class AuthorizationHelper : IAuthorizationHelper
 {
     private readonly IUserRepository _userRepository;
     private readonly AuthorizationService _authorizationService;
     private readonly IClaimExtractorService _claimExtractor;
 
-    public VacationAuthorizationHelper(
+    public AuthorizationHelper(
         IUserRepository userRepository,
         AuthorizationService authorizationService,
         IClaimExtractorService claimExtractor)
@@ -129,5 +129,37 @@ public class VacationAuthorizationHelper : IVacationAuthorizationHelper
             "ApproveVacation",
             null,
             new Dictionary<string, object> { ["TargetUserTeamId"] = targetUserTeamId });
+    }
+
+    /// <summary>
+    /// Ensures user is a manager and returns authorization result
+    /// </summary>
+    public async Task<(User? user, AuthorizationResult result)> EnsureManagerAsync(ClaimsPrincipal claimsPrincipal)
+    {
+        return await AuthorizeManagerOperationAsync(claimsPrincipal);
+    }
+
+    /// <summary>
+    /// Ensures user is authenticated and returns authorization result
+    /// </summary>
+    public async Task<(User? user, AuthorizationResult result)> EnsureAuthenticatedAsync(ClaimsPrincipal claimsPrincipal)
+    {
+        return await AuthorizeUserAsync(claimsPrincipal);
+    }
+
+    /// <summary>
+    /// Ensures user is a member of the specified team or a manager
+    /// </summary>
+    public async Task<(User? user, AuthorizationResult result)> EnsureTeamMemberOrManagerAsync(ClaimsPrincipal claimsPrincipal, Guid teamId)
+    {
+        var (user, result) = await EnsureAuthenticatedAsync(claimsPrincipal);
+        
+        if (!result.IsAuthorized || user == null)
+            return (user, result);
+        
+        if (user.IsManager || user.TeamId == teamId)
+            return (user, AuthorizationResult.Success());
+        
+        return (user, AuthorizationResult.Failure("User is not a member of this team and is not a manager"));
     }
 }

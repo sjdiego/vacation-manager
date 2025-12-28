@@ -5,9 +5,9 @@ using VacationManager.Core.Entities;
 namespace VacationManager.Api.Helpers;
 
 /// <summary>
-/// Interface for vacation authorization helper
+/// Interface for authorization helper
 /// </summary>
-public interface IVacationAuthorizationHelper
+public interface IAuthorizationHelper
 {
     Task<(User? user, AuthorizationResult result)> AuthorizeUserAsync(ClaimsPrincipal claimsPrincipal);
     Task<(User? user, AuthorizationResult result)> AuthorizeTeamOperationAsync(ClaimsPrincipal claimsPrincipal);
@@ -19,4 +19,8 @@ public interface IVacationAuthorizationHelper
     Task<(User? user, AuthorizationResult authResult)> AuthorizeApprovalAsync(
         ClaimsPrincipal claimsPrincipal,
         Guid targetUserTeamId);
+    
+    Task<(User? user, AuthorizationResult result)> EnsureManagerAsync(ClaimsPrincipal claimsPrincipal);
+    Task<(User? user, AuthorizationResult result)> EnsureAuthenticatedAsync(ClaimsPrincipal claimsPrincipal);
+    Task<(User? user, AuthorizationResult result)> EnsureTeamMemberOrManagerAsync(ClaimsPrincipal claimsPrincipal, Guid teamId);
 }

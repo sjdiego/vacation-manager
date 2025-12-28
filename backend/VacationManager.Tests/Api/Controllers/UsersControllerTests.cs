@@ -9,6 +9,7 @@ using VacationManager.Core.DTOs;
 using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
 using VacationManager.Api.Services;
+using VacationManager.Api.Helpers;
 
 namespace VacationManager.Tests.Api.Controllers;
 
@@ -18,6 +19,7 @@ public class UsersControllerTests
     private readonly IMapper _mapper;
     private readonly ILogger<UsersController> _logger;
     private readonly IClaimExtractorService _claimExtractor;
+    private readonly IAuthorizationHelper _authHelper;
     private readonly UsersController _controller;
 
     public UsersControllerTests()
@@ -26,7 +28,8 @@ public class UsersControllerTests
         _mapper = Substitute.For<IMapper>();
         _logger = Substitute.For<ILogger<UsersController>>();
         _claimExtractor = Substitute.For<IClaimExtractorService>();
-        _controller = new UsersController(_userRepository, _mapper, _logger, _claimExtractor);
+        _authHelper = Substitute.For<IAuthorizationHelper>();
+        _controller = new UsersController(_userRepository, _mapper, _logger, _claimExtractor, _authHelper);
     }
 
     [Fact]
@@ -63,14 +66,13 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task GetAll_WithNonManager_ReturnsBadRequest()
+    public async Task GetAll_WithNonManager_ReturnsForbidden()
     {
         // Arrange
-        var entraId = "user-entra-id";
-        var user = new User { Id = Guid.NewGuid(), EntraId = entraId, Email = "user@example.com", DisplayName = "User", IsManager = false };
+        var user = new User { Id = Guid.NewGuid(), EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", IsManager = false };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
-        _userRepository.GetByEntraIdAsync(entraId).Returns(user);
+        _authHelper.EnsureManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Failure("User is not a manager")));
 
         // Act
         var result = await _controller.GetAll();
@@ -84,8 +86,7 @@ public class UsersControllerTests
     public async Task GetAll_WithManager_ReturnsAllUsers()
     {
         // Arrange
-        var entraId = "manager-entra-id";
-        var manager = new User { Id = Guid.NewGuid(), EntraId = entraId, Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
+        var manager = new User { Id = Guid.NewGuid(), EntraId = "manager-entra-id", Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
         var users = new List<User>
         {
             new User { Id = Guid.NewGuid(), EntraId = "entra-1", Email = "user1@example.com", DisplayName = "User 1" },
@@ -93,8 +94,8 @@ public class UsersControllerTests
         };
         var userDtos = new List<UserDto> { new UserDto(), new UserDto() };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
-        _userRepository.GetByEntraIdAsync(entraId).Returns(manager);
+        _authHelper.EnsureManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((manager, VacationManager.Core.Authorization.AuthorizationResult.Success()));
         _userRepository.GetAllAsync().Returns(users);
         _mapper.Map<List<UserDto>>(users).Returns(userDtos);
 
@@ -196,7 +197,7 @@ public class UsersControllerTests
         var result = await _controller.GetMe();
 
         // Assert
-        Assert.IsType<NotFoundResult>(result.Result);
+        Assert.IsType<NotFoundObjectResult>(result.Result);
         await _userRepository.DidNotReceive().CreateAsync(Arg.Any<User>());
     }
 
@@ -211,8 +212,8 @@ public class UsersControllerTests
         var updatedUser = new User { Id = userId, EntraId = entraId, Email = "user@example.com", DisplayName = "User", TeamId = teamId };
         var userDto = new UserDto { Id = userId, TeamId = teamId };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
-        _userRepository.GetByEntraIdAsync(entraId).Returns(user);
+        _authHelper.EnsureAuthenticatedAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Success()));
         _userRepository.UpdateAsync(Arg.Any<User>()).Returns(updatedUser);
         _mapper.Map<UserDto>(updatedUser).Returns(userDto);
 
@@ -225,35 +226,34 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task GetByTeam_WithUserNotInTeam_ReturnsBadRequest()
+    public async Task GetByTeam_WithUserNotInTeam_ReturnsForbidden()
     {
         // Arrange
-        var entraId = "user-entra-id";
         var teamId = Guid.NewGuid();
-        var user = new User { Id = Guid.NewGuid(), EntraId = entraId, Email = "user@example.com", DisplayName = "User", TeamId = null, IsManager = false };
+        var user = new User { Id = Guid.NewGuid(), EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", TeamId = null, IsManager = false };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
-        _userRepository.GetByEntraIdAsync(entraId).Returns(user);
+        _authHelper.EnsureTeamMemberOrManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>(), teamId)
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Failure("User is not in the team")));
 
         // Act
         var result = await _controller.GetByTeam(teamId);
 
         // Assert
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        var objectResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]
     public async Task GetByTeam_WithValidTeamId_ReturnsTeamMembers()
     {
         // Arrange
-        var entraId = "user-entra-id";
         var teamId = Guid.NewGuid();
-        var user = new User { Id = Guid.NewGuid(), EntraId = entraId, Email = "user@example.com", DisplayName = "User", TeamId = teamId, IsManager = false };
+        var user = new User { Id = Guid.NewGuid(), EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", TeamId = teamId, IsManager = false };
         var users = new List<User> { new User { Id = Guid.NewGuid(), EntraId = "entra-1", Email = "user1@example.com", DisplayName = "User 1", TeamId = teamId } };
         var userDtos = new List<UserDto> { new UserDto() };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(entraId);
-        _userRepository.GetByEntraIdAsync(entraId).Returns(user);
+        _authHelper.EnsureTeamMemberOrManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>(), teamId)
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Success()));
         _userRepository.GetByTeamAsync(teamId).Returns(users);
         _mapper.Map<List<UserDto>>(users).Returns(userDtos);
 
@@ -266,16 +266,15 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task AssignUserToTeam_WithNonManager_ReturnsBadRequest()
+    public async Task AssignUserToTeam_WithNonManager_ReturnsForbidden()
     {
         // Arrange
-        var managerId = "manager-entra-id";
         var userId = Guid.NewGuid();
         var teamId = Guid.NewGuid();
-        var manager = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "user@example.com", DisplayName = "User", IsManager = false };
+        var user = new User { Id = Guid.NewGuid(), EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", IsManager = false };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
-        _userRepository.GetByEntraIdAsync(managerId).Returns(manager);
+        _authHelper.EnsureManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Failure("User is not a manager")));
 
         // Act
         var result = await _controller.AssignUserToTeam(userId, teamId);
@@ -289,16 +288,15 @@ public class UsersControllerTests
     public async Task AssignUserToTeam_WithManager_AssignsUserToTeam()
     {
         // Arrange
-        var managerId = "manager-entra-id";
         var userId = Guid.NewGuid();
         var teamId = Guid.NewGuid();
-        var manager = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
+        var manager = new User { Id = Guid.NewGuid(), EntraId = "manager-entra-id", Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
         var user = new User { Id = userId, EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", TeamId = null };
         var updatedUser = new User { Id = userId, EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", TeamId = teamId };
         var userDto = new UserDto { Id = userId, TeamId = teamId };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
-        _userRepository.GetByEntraIdAsync(managerId).Returns(manager);
+        _authHelper.EnsureManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((manager, VacationManager.Core.Authorization.AuthorizationResult.Success()));
         _userRepository.GetByIdAsync(userId).Returns(user);
         _userRepository.UpdateAsync(Arg.Any<User>()).Returns(updatedUser);
         _mapper.Map<UserDto>(updatedUser).Returns(userDto);
@@ -312,15 +310,14 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task RemoveUserFromTeam_WithNonManager_ReturnsBadRequest()
+    public async Task RemoveUserFromTeam_WithNonManager_ReturnsForbidden()
     {
         // Arrange
-        var managerId = "user-entra-id";
         var userId = Guid.NewGuid();
-        var user = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "user@example.com", DisplayName = "User", IsManager = false };
+        var user = new User { Id = Guid.NewGuid(), EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", IsManager = false };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
-        _userRepository.GetByEntraIdAsync(managerId).Returns(user);
+        _authHelper.EnsureManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Failure("User is not a manager")));
 
         // Act
         var result = await _controller.RemoveUserFromTeam(userId);
@@ -334,16 +331,15 @@ public class UsersControllerTests
     public async Task RemoveUserFromTeam_WithManager_RemovesUserFromTeam()
     {
         // Arrange
-        var managerId = "manager-entra-id";
         var userId = Guid.NewGuid();
         var teamId = Guid.NewGuid();
-        var manager = new User { Id = Guid.NewGuid(), EntraId = managerId, Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
+        var manager = new User { Id = Guid.NewGuid(), EntraId = "manager-entra-id", Email = "manager@example.com", DisplayName = "Manager", IsManager = true };
         var user = new User { Id = userId, EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", TeamId = teamId };
         var updatedUser = new User { Id = userId, EntraId = "user-entra-id", Email = "user@example.com", DisplayName = "User", TeamId = null };
         var userDto = new UserDto { Id = userId };
 
-        _claimExtractor.GetEntraId(_controller.User).Returns(managerId);
-        _userRepository.GetByEntraIdAsync(managerId).Returns(manager);
+        _authHelper.EnsureManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
+            .Returns((manager, VacationManager.Core.Authorization.AuthorizationResult.Success()));
         _userRepository.GetByIdAsync(userId).Returns(user);
         _userRepository.UpdateAsync(Arg.Any<User>()).Returns(updatedUser);
         _mapper.Map<UserDto>(updatedUser).Returns(userDto);

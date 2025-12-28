@@ -25,7 +25,7 @@ public class VacationsController : ControllerBase
     private readonly IMapper _mapper;
     private readonly ILogger<VacationsController> _logger;
     private readonly IVacationValidationService _validationService;
-    private readonly IVacationAuthorizationHelper _authHelper;
+    private readonly IAuthorizationHelper _authHelper;
 
     public VacationsController(
         IVacationRepository vacationRepository,
@@ -33,7 +33,7 @@ public class VacationsController : ControllerBase
         IMapper mapper,
         ILogger<VacationsController> logger,
         IVacationValidationService validationService,
-        IVacationAuthorizationHelper authHelper)
+        IAuthorizationHelper authHelper)
     {
         _vacationRepository = vacationRepository;
         _userRepository = userRepository;
