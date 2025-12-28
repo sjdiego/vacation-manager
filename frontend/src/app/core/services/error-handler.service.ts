@@ -7,6 +7,18 @@ export interface ApiError {
   message: string;
   details?: any;
   timestamp: Date;
+  validationErrors?: Record<string, string[]>;
+}
+
+export interface ProblemDetails {
+  type?: string;
+  title?: string;
+  status?: number;
+  detail?: string;
+  instance?: string;
+  extensions?: Record<string, any>;
+  errors?: Record<string, string[]>;
+  traceId?: string;
 }
 
 @Injectable({
@@ -21,8 +33,25 @@ export class ErrorHandlerService {
       timestamp: new Date()
     };
 
+    // Extract validation errors from Problem Details if present
+    if (this.isProblemDetails(error.error)) {
+      const problemDetails = error.error as ProblemDetails;
+      if (problemDetails.errors) {
+        apiError.validationErrors = problemDetails.errors;
+      }
+      // Use the detail from Problem Details if available
+      if (problemDetails.detail) {
+        apiError.message = problemDetails.detail;
+      }
+    }
+
     console.error('API Error:', apiError);
     return throwError(() => apiError);
+  }
+
+  private isProblemDetails(error: any): error is ProblemDetails {
+    return error && typeof error === 'object' && 
+           ('type' in error || 'title' in error || 'detail' in error);
   }
 
   private getErrorMessage(error: HttpErrorResponse): string {
@@ -30,11 +59,23 @@ export class ErrorHandlerService {
       return error.error.message;
     }
 
+    // Try to extract message from Problem Details
+    if (this.isProblemDetails(error.error)) {
+      const problemDetails = error.error as ProblemDetails;
+      if (problemDetails.detail) {
+        return problemDetails.detail;
+      }
+      if (problemDetails.title) {
+        return problemDetails.title;
+      }
+    }
+
+    // Fallback to generic messages based on status code
     switch (error.status) {
       case 0:
         return 'Unable to connect to the server. Please check your network connection.';
       case 400:
-        return error.error?.message || 'Bad request. Please check your input.';
+        return error.error?.message || error.error?.detail || 'Bad request. Please check your input.';
       case 401:
         return 'Unauthorized. Please log in again.';
       case 403:
@@ -42,9 +83,9 @@ export class ErrorHandlerService {
       case 404:
         return 'Resource not found.';
       case 409:
-        return error.error?.message || 'Conflict. The resource may already exist.';
+        return error.error?.message || error.error?.detail || 'Conflict. The resource may already exist.';
       case 422:
-        return error.error?.message || 'Validation error. Please check your input.';
+        return error.error?.message || error.error?.detail || 'Validation error. Please check your input.';
       case 500:
         return 'Internal server error. Please try again later.';
       case 503:

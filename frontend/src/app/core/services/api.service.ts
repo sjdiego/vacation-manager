@@ -4,6 +4,9 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@environments/environment';
 
+/**
+ * Interface matching the backend's ApiResponse wrapper for successful responses
+ */
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -11,6 +14,17 @@ export interface ApiResponse<T> {
   meta?: Record<string, any>;
 }
 
+/**
+ * Service for making HTTP requests to the API.
+ * 
+ * Note: This service only handles successful responses wrapped in ApiResponse<T>.
+ * Error responses (4xx/5xx) from the backend follow RFC 7807 Problem Details format
+ * and are handled by the ErrorInterceptor before reaching this service.
+ * 
+ * Backend response patterns:
+ * - Success (2xx): { success: true, data: T, message?: string }
+ * - Error (4xx/5xx): { type, title, status, detail, instance, errors?, extensions? }
+ */
 @Injectable({
   providedIn: 'root'
 })
