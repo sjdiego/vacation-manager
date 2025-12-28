@@ -58,7 +58,7 @@ public class TeamsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<TeamDto>> GetById(Guid id)
     {
-        var (user, authResult) = await _authHelper.EnsureTeamMemberOrManagerAsync(User, id);
+        var (_, authResult) = await _authHelper.EnsureTeamMemberOrManagerAsync(User, id);
         if (!authResult.IsAuthorized)
             return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
