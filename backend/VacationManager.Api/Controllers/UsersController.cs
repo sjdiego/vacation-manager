@@ -139,7 +139,7 @@ public class UsersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<UserDto>>> GetAll()
     {
-        var (manager, authResult) = await _authHelper.EnsureManagerAsync(User);
+        var (_, authResult) = await _authHelper.EnsureManagerAsync(User);
         if (!authResult.IsAuthorized)
             return this.ForbiddenProblem(authResult.FailureReason ?? "Unauthorized");
 
@@ -197,9 +197,9 @@ public class UsersController : ControllerBase
      [HttpGet("team/{teamId}")]
      public async Task<ActionResult<IEnumerable<UserDto>>> GetByTeam(Guid teamId)
      {
-         var (user, authResult) = await _authHelper.EnsureTeamMemberOrManagerAsync(User, teamId);
+         var (_, authResult) = await _authHelper.EnsureTeamMemberOrManagerAsync(User, teamId);
          if (!authResult.IsAuthorized)
-             return this.ForbiddenProblem(authResult.FailureReason ?? "Unauthorized");
+             return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
          var users = await _userRepository.GetByTeamAsync(teamId);
          return Ok(_mapper.Map<List<UserDto>>(users));
