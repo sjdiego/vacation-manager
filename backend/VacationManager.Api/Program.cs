@@ -42,9 +42,9 @@ app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseHttpsRedirection();
 app.UseIpRateLimiting();
 app.UseCors("AllowAngular");
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 app.MapControllers();
 
 // Database migration
