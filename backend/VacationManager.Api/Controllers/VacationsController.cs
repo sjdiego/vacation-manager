@@ -144,7 +144,8 @@ public class VacationsController : ControllerBase
 
         vacation.StartDate = dto.StartDate;
         vacation.EndDate = dto.EndDate;
-        vacation.Type = dto.Type;
+        if (dto.Type.HasValue)
+            vacation.Type = dto.Type.Value;
         vacation.Notes = dto.Notes;
         vacation.UpdatedAt = DateTime.UtcNow;
 

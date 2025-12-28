@@ -104,7 +104,7 @@ public class AuthorizationHelper : IAuthorizationHelper
     {
         return await AuthorizeAsync(
             claimsPrincipal,
-            AuthorizationChainFactory.CreateViewTeamPendingVacationsChain(),
+            AuthorizationChainFactory.CreateManagerOperationChain(),
             "ManagerOperation");
     }
 

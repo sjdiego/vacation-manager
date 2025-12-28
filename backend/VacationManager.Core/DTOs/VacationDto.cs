@@ -29,7 +29,7 @@ public class UpdateVacationDto
 {
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
-    public VacationType Type { get; set; }
+    public VacationType? Type { get; set; }
     public string? Notes { get; set; }
 }
 

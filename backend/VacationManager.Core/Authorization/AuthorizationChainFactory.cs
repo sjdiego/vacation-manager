@@ -22,6 +22,19 @@ public static class AuthorizationChainFactory
     }
 
     /// <summary>
+    /// Creates a chain for manager operations (only requires manager role, no team membership)
+    /// </summary>
+    public static AuthorizationHandler CreateManagerOperationChain()
+    {
+        var userExists = new UserExistsHandler();
+        var isManager = new ManagerRoleHandler();
+
+        userExists.SetNext(isManager);
+
+        return userExists;
+    }
+
+    /// <summary>
     /// Creates a chain for creating vacations (requires team membership)
     /// </summary>
     public static AuthorizationHandler CreateVacationChain()
