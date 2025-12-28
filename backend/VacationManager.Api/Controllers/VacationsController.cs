@@ -7,7 +7,9 @@ using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
 using VacationManager.Core.Validation;
 using VacationManager.Core.Specifications;
-using VacationManager.Api.Services;
+using VacationManager.Core.Authorization;
+using VacationManager.Core.Authorization.Handlers;
+using VacationManager.Api.Helpers;
 using VacationManager.Api.Extensions;
 
 namespace VacationManager.Api.Controllers;
@@ -22,35 +24,31 @@ public class VacationsController : ControllerBase
     private readonly IUserRepository _userRepository;
     private readonly IMapper _mapper;
     private readonly ILogger<VacationsController> _logger;
-    private readonly IClaimExtractorService _claimExtractor;
     private readonly IVacationValidationService _validationService;
+    private readonly VacationAuthorizationHelper _authHelper;
 
     public VacationsController(
         IVacationRepository vacationRepository,
         IUserRepository userRepository,
         IMapper mapper,
         ILogger<VacationsController> logger,
-        IClaimExtractorService claimExtractor,
-        IVacationValidationService validationService)
+        IVacationValidationService validationService,
+        VacationAuthorizationHelper authHelper)
     {
         _vacationRepository = vacationRepository;
         _userRepository = userRepository;
         _mapper = mapper;
         _logger = logger;
-        _claimExtractor = claimExtractor;
         _validationService = validationService;
+        _authHelper = authHelper;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<VacationDto>>> GetMyVacations()
     {
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(userEntraId))
-            return Unauthorized();
-
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        if (user == null)
-            return NotFound("User not found");
+        var (user, authResult) = await _authHelper.AuthorizeUserAsync(User);
+        if (!authResult.IsAuthorized || user == null)
+            return this.BadRequestProblem(authResult.FailureReason!);
 
         var vacations = await _vacationRepository.GetByUserIdAsync(user.Id);
         return Ok(_mapper.Map<List<VacationDto>>(vacations));
@@ -59,17 +57,11 @@ public class VacationsController : ControllerBase
     [HttpGet("team/pending")]
     public async Task<ActionResult<IEnumerable<VacationDto>>> GetTeamPendingVacations()
     {
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(userEntraId))
-            return Unauthorized();
+        var (user, authResult) = await _authHelper.AuthorizeManagerOperationAsync(User);
+        if (!authResult.IsAuthorized || user == null)
+            return this.ForbiddenProblem(authResult.FailureReason!);
 
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        if (user == null || !user.IsManager || user.TeamId == null)
-            return this.ForbiddenProblem("Only team managers can view pending vacations");
-
-        var vacations = await _vacationRepository.GetByTeamAsync(user.TeamId.Value);
-        
-        // Apply Specification Pattern
+        var vacations = await _vacationRepository.GetByTeamAsync(user.TeamId!.Value);
         var pendingSpec = new PendingVacationsSpecification();
         var pendingVacations = vacations.Where(pendingSpec).ToList();
         
@@ -79,17 +71,12 @@ public class VacationsController : ControllerBase
     [HttpGet("team")]
     public async Task<ActionResult<IEnumerable<VacationDto>>> GetTeamVacations([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
     {
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(userEntraId))
-            return Unauthorized();
+        var (user, authResult) = await _authHelper.AuthorizeTeamOperationAsync(User);
+        if (!authResult.IsAuthorized || user == null)
+            return this.BadRequestProblem(authResult.FailureReason!);
 
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        if (user == null || user.TeamId == null)
-            return this.BadRequestProblem("User must be part of a team");
-
-        var vacations = await _vacationRepository.GetByTeamAsync(user.TeamId.Value);
+        var vacations = await _vacationRepository.GetByTeamAsync(user.TeamId!.Value);
         
-        // Apply Specification Pattern for date filtering
         if (startDate.HasValue && endDate.HasValue)
         {
             var dateRangeSpec = new DateRangeSpecification(startDate.Value, endDate.Value);
@@ -112,13 +99,9 @@ public class VacationsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<VacationDto>> Create(CreateVacationDto dto)
     {
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        if (string.IsNullOrEmpty(userEntraId))
-            return Unauthorized();
-
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        if (user == null)
-            return NotFound("User not found");
+        var (user, authResult) = await _authHelper.AuthorizeTeamOperationAsync(User);
+        if (!authResult.IsAuthorized || user == null)
+            return this.BadRequestProblem(authResult.FailureReason!);
 
         var vacation = new Vacation
         {
@@ -155,11 +138,9 @@ public class VacationsController : ControllerBase
         if (vacation == null)
             return NotFound();
 
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        
-        if (vacation.UserId != user?.Id)
-            return Forbid();
+        var (user, authResult) = await _authHelper.AuthorizeVacationOwnershipAsync(User, vacation);
+        if (!authResult.IsAuthorized || user == null)
+            return this.ForbiddenProblem(authResult.FailureReason!);
 
         vacation.StartDate = dto.StartDate;
         vacation.EndDate = dto.EndDate;
@@ -178,11 +159,9 @@ public class VacationsController : ControllerBase
         if (vacation == null)
             return NotFound();
 
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        
-        if (vacation.UserId != user?.Id)
-            return Forbid();
+        var (user, authResult) = await _authHelper.AuthorizeVacationOwnershipAsync(User, vacation);
+        if (!authResult.IsAuthorized || user == null)
+            return this.ForbiddenProblem(authResult.FailureReason!);
 
         await _vacationRepository.DeleteAsync(id);
         _logger.LogInformation("Vacation deleted: {VacationId}", id);
@@ -197,15 +176,13 @@ public class VacationsController : ControllerBase
         if (vacation == null)
             return NotFound();
 
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        var manager = await _userRepository.GetByEntraIdAsync(userEntraId);
-        
-        if (manager == null || !manager.IsManager)
-            return this.ForbiddenProblem("Only managers can approve vacations");
+        var vacationOwner = await _userRepository.GetByIdAsync(vacation.UserId);
+        if (vacationOwner == null)
+            return NotFound("Vacation owner not found");
 
-        var user = await _userRepository.GetByIdAsync(vacation.UserId);
-        if (user?.TeamId != manager.TeamId)
-            return this.ForbiddenProblem("Only vacations for team members can be approved");
+        var (manager, authResult) = await _authHelper.AuthorizeApprovalAsync(User, vacationOwner.TeamId!.Value);
+        if (!authResult.IsAuthorized || manager == null)
+            return this.ForbiddenProblem(authResult.FailureReason!);
 
         vacation.Status = dto.Approved ? VacationStatus.Approved : VacationStatus.Rejected;
         vacation.ApprovedBy = manager.Id;
@@ -225,17 +202,14 @@ public class VacationsController : ControllerBase
         if (vacation == null)
             return NotFound();
 
-        var userEntraId = _claimExtractor.GetEntraId(User);
-        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
-        
-        if (user == null)
-            return Unauthorized();
+        var vacationOwner = await _userRepository.GetByIdAsync(vacation.UserId);
+        if (vacationOwner == null)
+            return NotFound("Vacation owner not found");
 
-        var isOwner = vacation.UserId == user.Id;
-        var isManager = user.IsManager && (await _userRepository.GetByIdAsync(vacation.UserId))?.TeamId == user.TeamId;
-
-        if (!isOwner && !isManager)
-            return Forbid();
+        var (user, authResult) = await _authHelper.AuthorizeVacationOwnershipAsync(
+            User, vacation, vacationOwner.TeamId);
+        if (!authResult.IsAuthorized || user == null)
+            return this.ForbiddenProblem(authResult.FailureReason!);
 
         if (vacation.Status != VacationStatus.Approved)
             return this.BadRequestProblem("Only approved vacations can be cancelled");

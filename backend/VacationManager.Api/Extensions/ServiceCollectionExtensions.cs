@@ -40,6 +40,10 @@ public static class ServiceCollectionExtensions
         // Register validation service
         services.AddScoped<IVacationValidationService, VacationValidationService>();
         
+        // Register authorization service
+        services.AddScoped<VacationManager.Core.Authorization.AuthorizationService>();
+        services.AddScoped<VacationAuthorizationHelper>();
+        
         return services;
     }
 

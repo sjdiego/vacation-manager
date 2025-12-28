@@ -1,0 +1,132 @@
+using VacationManager.Core.Authorization;
+using VacationManager.Core.Entities;
+using VacationManager.Core.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+
+namespace VacationManager.Api.Helpers;
+
+/// <summary>
+/// Helper service to simplify authorization checks in controllers
+/// </summary>
+public class VacationAuthorizationHelper
+{
+    private readonly IUserRepository _userRepository;
+    private readonly AuthorizationService _authorizationService;
+    private readonly IClaimExtractorService _claimExtractor;
+
+    public VacationAuthorizationHelper(
+        IUserRepository userRepository,
+        AuthorizationService authorizationService,
+        IClaimExtractorService claimExtractor)
+    {
+        _userRepository = userRepository;
+        _authorizationService = authorizationService;
+        _claimExtractor = claimExtractor;
+    }
+
+    /// <summary>
+    /// Gets the current user from claims and checks authorization
+    /// </summary>
+    public async Task<(User? user, AuthorizationResult authResult)> AuthorizeAsync(
+        ClaimsPrincipal claimsPrincipal,
+        AuthorizationHandler chain,
+        string operation,
+        object? resource = null,
+        Dictionary<string, object>? additionalData = null)
+    {
+        var userEntraId = _claimExtractor.GetEntraId(claimsPrincipal);
+        if (string.IsNullOrEmpty(userEntraId))
+        {
+            return (null, AuthorizationResult.Failure("Unauthorized", "UNAUTHORIZED"));
+        }
+
+        var user = await _userRepository.GetByEntraIdAsync(userEntraId);
+        if (user == null)
+        {
+            return (null, AuthorizationResult.Failure("User not found", "USER_NOT_FOUND"));
+        }
+
+        var context = new AuthorizationContext
+        {
+            User = user,
+            Operation = operation,
+            Resource = resource,
+            AdditionalData = additionalData ?? new Dictionary<string, object>()
+        };
+
+        var authResult = await _authorizationService.AuthorizeAsync(chain, context);
+        return (user, authResult);
+    }
+
+    /// <summary>
+    /// Simplified authorization for basic user operations (just checks user exists)
+    /// </summary>
+    public async Task<(User? user, AuthorizationResult authResult)> AuthorizeUserAsync(
+        ClaimsPrincipal claimsPrincipal)
+    {
+        return await AuthorizeAsync(
+            claimsPrincipal,
+            AuthorizationChainFactory.CreateVacationChain(),
+            "UserOperation");
+    }
+
+    /// <summary>
+    /// Simplified authorization for team operations
+    /// </summary>
+    public async Task<(User? user, AuthorizationResult authResult)> AuthorizeTeamOperationAsync(
+        ClaimsPrincipal claimsPrincipal)
+    {
+        return await AuthorizeAsync(
+            claimsPrincipal,
+            AuthorizationChainFactory.CreateViewTeamVacationsChain(),
+            "TeamOperation");
+    }
+
+    /// <summary>
+    /// Simplified authorization for manager operations
+    /// </summary>
+    public async Task<(User? user, AuthorizationResult authResult)> AuthorizeManagerOperationAsync(
+        ClaimsPrincipal claimsPrincipal)
+    {
+        return await AuthorizeAsync(
+            claimsPrincipal,
+            AuthorizationChainFactory.CreateViewTeamPendingVacationsChain(),
+            "ManagerOperation");
+    }
+
+    /// <summary>
+    /// Simplified authorization for vacation ownership
+    /// </summary>
+    public async Task<(User? user, AuthorizationResult authResult)> AuthorizeVacationOwnershipAsync(
+        ClaimsPrincipal claimsPrincipal,
+        Vacation vacation,
+        Guid? vacationOwnerTeamId = null)
+    {
+        var additionalData = vacationOwnerTeamId.HasValue
+            ? new Dictionary<string, object> { ["VacationOwnerTeamId"] = vacationOwnerTeamId.Value }
+            : null;
+
+        return await AuthorizeAsync(
+            claimsPrincipal,
+            AuthorizationChainFactory.CreateVacationOwnershipChain(),
+            "VacationOwnership",
+            vacation,
+            additionalData);
+    }
+
+    /// <summary>
+    /// Simplified authorization for approving vacations
+    /// </summary>
+    public async Task<(User? user, AuthorizationResult authResult)> AuthorizeApprovalAsync(
+        ClaimsPrincipal claimsPrincipal,
+        Guid targetUserTeamId)
+    {
+        return await AuthorizeAsync(
+            claimsPrincipal,
+            AuthorizationChainFactory.CreateApproveVacationChain(),
+            "ApproveVacation",
+            null,
+            new Dictionary<string, object> { ["TargetUserTeamId"] = targetUserTeamId });
+    }
+}
