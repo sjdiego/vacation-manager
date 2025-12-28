@@ -6,6 +6,7 @@ using VacationManager.Core.DTOs;
 using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
 using VacationManager.Core.Validation;
+using VacationManager.Core.Specifications;
 using VacationManager.Api.Services;
 using VacationManager.Api.Extensions;
 
@@ -67,9 +68,10 @@ public class VacationsController : ControllerBase
             return this.ForbiddenProblem("Only team managers can view pending vacations");
 
         var vacations = await _vacationRepository.GetByTeamAsync(user.TeamId.Value);
-        var pendingVacations = vacations
-            .Where(v => v.Status == VacationStatus.Pending)
-            .ToList();
+        
+        // Apply Specification Pattern
+        var pendingSpec = new PendingVacationsSpecification();
+        var pendingVacations = vacations.Where(pendingSpec).ToList();
         
         return Ok(_mapper.Map<List<VacationDto>>(pendingVacations));
     }
@@ -87,11 +89,11 @@ public class VacationsController : ControllerBase
 
         var vacations = await _vacationRepository.GetByTeamAsync(user.TeamId.Value);
         
+        // Apply Specification Pattern for date filtering
         if (startDate.HasValue && endDate.HasValue)
         {
-            vacations = vacations
-                .Where(v => v.StartDate <= endDate && v.EndDate >= startDate)
-                .ToList();
+            var dateRangeSpec = new DateRangeSpecification(startDate.Value, endDate.Value);
+            vacations = vacations.Where(dateRangeSpec).ToList();
         }
         
         return Ok(_mapper.Map<List<VacationDto>>(vacations));
