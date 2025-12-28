@@ -39,7 +39,7 @@ public class ApiResponseWrapperFilter : IActionFilter
         {
             // Don't wrap if already wrapped, if it's a ProblemDetails, or if value is null
             if (objectResult.Value == null || 
-                objectResult.Value is ApiResponse<object> || 
+                IsAlreadyWrapped(objectResult.Value) || 
                 objectResult.Value is ProblemDetails)
             {
                 return;
@@ -56,6 +56,12 @@ public class ApiResponseWrapperFilter : IActionFilter
                 StatusCode = objectResult.StatusCode
             };
         }
+    }
+
+    private static bool IsAlreadyWrapped(object value)
+    {
+        var type = value.GetType();
+        return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ApiResponse<>);
     }
 }
 

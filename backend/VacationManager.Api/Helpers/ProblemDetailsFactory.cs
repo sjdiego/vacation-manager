@@ -25,22 +25,22 @@ public static class ProblemDetailsFactory
             Instance = instance ?? string.Empty
         };
 
-        if (extensions != null)
+        if (extensions != null || !string.IsNullOrEmpty(traceId))
         {
             problemDetails.Extensions = new Dictionary<string, object?>();
-            foreach (var kvp in extensions)
+            
+            if (extensions != null)
             {
-                problemDetails.Extensions[kvp.Key] = kvp.Value;
+                foreach (var kvp in extensions)
+                {
+                    problemDetails.Extensions[kvp.Key] = kvp.Value;
+                }
             }
-        }
-        else
-        {
-            problemDetails.Extensions = new Dictionary<string, object?>();
-        }
 
-        if (!string.IsNullOrEmpty(traceId))
-        {
-            problemDetails.Extensions["traceId"] = traceId;
+            if (!string.IsNullOrEmpty(traceId))
+            {
+                problemDetails.Extensions["traceId"] = traceId;
+            }
         }
 
         return problemDetails;
@@ -166,22 +166,22 @@ public static class ProblemDetailsFactory
             Instance = instance ?? string.Empty
         };
 
-        if (extensions != null)
+        if (extensions != null || !string.IsNullOrEmpty(traceId))
         {
             problemDetails.Extensions = new Dictionary<string, object?>();
-            foreach (var kvp in extensions)
+            
+            if (extensions != null)
             {
-                problemDetails.Extensions[kvp.Key] = kvp.Value;
+                foreach (var kvp in extensions)
+                {
+                    problemDetails.Extensions[kvp.Key] = kvp.Value;
+                }
             }
-        }
-        else
-        {
-            problemDetails.Extensions = new Dictionary<string, object?>();
-        }
 
-        if (!string.IsNullOrEmpty(traceId))
-        {
-            problemDetails.Extensions["traceId"] = traceId;
+            if (!string.IsNullOrEmpty(traceId))
+            {
+                problemDetails.Extensions["traceId"] = traceId;
+            }
         }
 
         return problemDetails;

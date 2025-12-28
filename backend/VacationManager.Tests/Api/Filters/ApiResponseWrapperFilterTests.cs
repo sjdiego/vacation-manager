@@ -143,6 +143,57 @@ public class ApiResponseWrapperFilterTests
     }
 
     [Fact]
+    public void ApiResponseWrapperFilter_WithAlreadyWrappedStringResponse_DoesNotDoubleWrap()
+    {
+        // Arrange
+        var wrappedData = new ApiResponse<string> { Success = true, Data = "Test string" };
+        var objectResult = new ObjectResult(wrappedData) { StatusCode = StatusCodes.Status200OK };
+        var context = CreateContext(objectResult);
+
+        // Act
+        _filter.OnActionExecuted(context);
+
+        // Assert
+        var result = Assert.IsType<ObjectResult>(context.Result);
+        Assert.IsType<ApiResponse<string>>(result.Value);
+        Assert.Equal(wrappedData, result.Value);
+    }
+
+    [Fact]
+    public void ApiResponseWrapperFilter_WithAlreadyWrappedIntResponse_DoesNotDoubleWrap()
+    {
+        // Arrange
+        var wrappedData = new ApiResponse<int> { Success = true, Data = 42 };
+        var objectResult = new ObjectResult(wrappedData) { StatusCode = StatusCodes.Status200OK };
+        var context = CreateContext(objectResult);
+
+        // Act
+        _filter.OnActionExecuted(context);
+
+        // Assert
+        var result = Assert.IsType<ObjectResult>(context.Result);
+        Assert.IsType<ApiResponse<int>>(result.Value);
+        Assert.Equal(wrappedData, result.Value);
+    }
+
+    [Fact]
+    public void ApiResponseWrapperFilter_WithAlreadyWrappedListResponse_DoesNotDoubleWrap()
+    {
+        // Arrange
+        var wrappedData = new ApiResponse<List<string>> { Success = true, Data = new List<string> { "a", "b", "c" } };
+        var objectResult = new ObjectResult(wrappedData) { StatusCode = StatusCodes.Status200OK };
+        var context = CreateContext(objectResult);
+
+        // Act
+        _filter.OnActionExecuted(context);
+
+        // Assert
+        var result = Assert.IsType<ObjectResult>(context.Result);
+        Assert.IsType<ApiResponse<List<string>>>(result.Value);
+        Assert.Equal(wrappedData, result.Value);
+    }
+
+    [Fact]
     public void ApiResponseWrapperFilter_WithNullValue_DoesNotWrapResponse()
     {
         // Arrange
