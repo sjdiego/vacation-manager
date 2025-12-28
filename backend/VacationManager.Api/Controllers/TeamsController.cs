@@ -6,6 +6,7 @@ using VacationManager.Core.DTOs;
 using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
 using VacationManager.Api.Services;
+using VacationManager.Api.Extensions;
 
 namespace VacationManager.Api.Controllers;
 
@@ -86,7 +87,7 @@ public class TeamsController : ControllerBase
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
         if (user == null || !user.IsManager)
-            return BadRequest(new { error = "Only managers can create teams" });
+            return this.ForbiddenProblem("Only managers can create teams");
 
         var team = new Team
         {
@@ -110,7 +111,7 @@ public class TeamsController : ControllerBase
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
         if (user == null || !user.IsManager)
-            return BadRequest(new { error = "Only managers can update teams" });
+            return this.ForbiddenProblem("Only managers can update teams");
 
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)
@@ -136,7 +137,7 @@ public class TeamsController : ControllerBase
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
         if (user == null || !user.IsManager)
-            return BadRequest(new { error = "Only managers can delete teams" });
+            return this.ForbiddenProblem("Only managers can delete teams");
 
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)

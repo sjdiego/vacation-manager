@@ -12,6 +12,16 @@ public static class WebApplicationExtensions
             app.UseSwagger();
             app.UseSwaggerUI(options =>
             {
+                var provider = app.Services.GetRequiredService<Asp.Versioning.ApiExplorer.IApiVersionDescriptionProvider>();
+                
+                // Add a dropdown for each API version
+                foreach (var description in provider.ApiVersionDescriptions)
+                {
+                    options.SwaggerEndpoint(
+                        $"/swagger/{description.GroupName}/swagger.json",
+                        description.GroupName.ToUpperInvariant());
+                }
+                
                 options.OAuthClientId(configuration["EntraId:SwaggerClientId"]);
                 options.OAuthAppName("VacationManager API");
                 options.OAuthUsePkce();

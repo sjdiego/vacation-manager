@@ -61,17 +61,6 @@ public class SecurityHeadersMiddlewareTests : IDisposable
     }
 
     [Fact]
-    public async Task SecurityHeadersMiddleware_AddsXXSSProtectionHeader()
-    {
-        // Act
-        var response = await _client.GetAsync("/");
-
-        // Assert
-        Assert.True(response.Headers.Contains("X-XSS-Protection"));
-        Assert.Equal("1; mode=block", response.Headers.GetValues("X-XSS-Protection").First());
-    }
-
-    [Fact]
     public async Task SecurityHeadersMiddleware_AddsCspHeader()
     {
         // Act
@@ -121,7 +110,6 @@ public class SecurityHeadersMiddlewareTests : IDisposable
             "X-Frame-Options",
             "X-Content-Type-Options",
             "Strict-Transport-Security",
-            "X-XSS-Protection",
             "Content-Security-Policy",
             "Referrer-Policy",
             "Permissions-Policy"

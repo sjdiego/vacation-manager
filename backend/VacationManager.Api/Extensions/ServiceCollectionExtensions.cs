@@ -2,11 +2,15 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 using Microsoft.EntityFrameworkCore;
 using FluentValidation;
+using Asp.Versioning;
+using Microsoft.Extensions.Options;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using VacationManager.Data;
 using VacationManager.Core.Interfaces;
 using VacationManager.Core.Validators;
 using VacationManager.Data.Repositories;
 using VacationManager.Api.Services;
+using VacationManager.Api.Configuration;
 
 namespace VacationManager.Api.Extensions;
 
@@ -48,6 +52,25 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddApplicationVersioning(this IServiceCollection services)
+    {
+        services.AddApiVersioning(options =>
+        {
+            options.DefaultApiVersion = new ApiVersion(1, 0);
+            options.AssumeDefaultVersionWhenUnspecified = true;
+            options.ReportApiVersions = true;
+            options.ApiVersionReader = new UrlSegmentApiVersionReader();
+        })
+        .AddMvc()
+        .AddApiExplorer(options =>
+        {
+            options.GroupNameFormat = "'v'VVV";
+            options.SubstituteApiVersionInUrl = true;
+        });
+
+        return services;
+    }
+
     public static IServiceCollection AddApplicationCors(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
@@ -79,42 +102,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApplicationSwagger(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen(options =>
-        {
-            var apiClientId = configuration["EntraId:ClientId"];
-            var scope = $"api://{apiClientId}/access_as_user";
-            
-            options.AddSecurityDefinition("oauth2", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Type = Microsoft.OpenApi.Models.SecuritySchemeType.OAuth2,
-                Flows = new Microsoft.OpenApi.Models.OpenApiOAuthFlows
-                {
-                    Implicit = new Microsoft.OpenApi.Models.OpenApiOAuthFlow
-                    {
-                        AuthorizationUrl = new Uri($"{configuration["EntraId:Instance"]}{configuration["EntraId:TenantId"]}/oauth2/v2.0/authorize"),
-                        Scopes = new Dictionary<string, string>
-                        {
-                            { scope, "Access the API" }
-                        }
-                    }
-                }
-            });
-            
-            options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-            {
-                {
-                    new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-                    {
-                        Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                        {
-                            Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                            Id = "oauth2"
-                        }
-                    },
-                    new[] { scope }
-                }
-            });
-        });
+        services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
+        services.AddSwaggerGen();
         
         return services;
     }

@@ -6,6 +6,7 @@ using VacationManager.Core.DTOs;
 using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
 using VacationManager.Api.Services;
+using VacationManager.Api.Extensions;
 
 namespace VacationManager.Api.Controllers;
 
@@ -92,7 +93,7 @@ public class UsersController : ControllerBase
             return NotFound("User not found");
 
         if (user.TeamId == teamId)
-            return BadRequest(new { error = "User is already member of this team" });
+            return this.ConflictProblem("User is already member of this team");
 
         user.TeamId = teamId;
         user.UpdatedAt = DateTime.UtcNow;
@@ -115,7 +116,7 @@ public class UsersController : ControllerBase
             return NotFound("User not found");
 
         if (user.TeamId == null)
-            return BadRequest(new { error = "User is not member of any team" });
+            return this.BadRequestProblem("User is not member of any team");
 
         var previousTeamId = user.TeamId;
         user.TeamId = null;
@@ -146,7 +147,7 @@ public class UsersController : ControllerBase
 
         var user = await _userRepository.GetByEntraIdAsync(userEntraId);
         if (user == null || !user.IsManager)
-            return BadRequest(new { error = "Only managers can view all users" });
+            return this.ForbiddenProblem("Only managers can view all users");
 
         var users = await _userRepository.GetAllAsync();
         return Ok(_mapper.Map<List<UserDto>>(users));
@@ -161,14 +162,14 @@ public class UsersController : ControllerBase
 
         var manager = await _userRepository.GetByEntraIdAsync(managerEntraId);
         if (manager == null || !manager.IsManager)
-            return BadRequest(new { error = "Only managers can assign users to teams" });
+            return this.ForbiddenProblem("Only managers can assign users to teams");
 
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null)
             return NotFound("User not found");
 
         if (user.TeamId == teamId)
-            return BadRequest(new { error = "User is already member of this team" });
+            return this.ConflictProblem("User is already member of this team");
 
         user.TeamId = teamId;
         user.UpdatedAt = DateTime.UtcNow;
@@ -188,14 +189,14 @@ public class UsersController : ControllerBase
 
         var manager = await _userRepository.GetByEntraIdAsync(managerEntraId);
         if (manager == null || !manager.IsManager)
-            return BadRequest(new { error = "Only managers can remove users from teams" });
+            return this.ForbiddenProblem("Only managers can remove users from teams");
 
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null)
             return NotFound("User not found");
 
         if (user.TeamId == null)
-            return BadRequest(new { error = "User is not member of any team" });
+            return this.BadRequestProblem("User is not member of any team");
 
         var previousTeamId = user.TeamId;
         user.TeamId = null;
@@ -216,10 +217,10 @@ public class UsersController : ControllerBase
 
          var user = await _userRepository.GetByEntraIdAsync(userEntraId);
          if (user == null || user.TeamId == null)
-             return BadRequest(new { error = "User must be part of a team" });
+             return this.BadRequestProblem("User must be part of a team");
 
          if (user.TeamId != teamId && !user.IsManager)
-             return BadRequest(new { error = "Can only view users from your own team" });
+             return this.ForbiddenProblem("Can only view users from your own team");
 
          var users = await _userRepository.GetByTeamAsync(teamId);
          return Ok(_mapper.Map<List<UserDto>>(users));

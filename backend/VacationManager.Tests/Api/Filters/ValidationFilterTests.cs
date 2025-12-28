@@ -37,7 +37,7 @@ public class ValidationFilterTests
             var executedContext = new ActionExecutedContext(
                 actionContext,
                 new List<IFilterMetadata>(),
-                null);
+                null!);
             return executedContext;
         };
     }
