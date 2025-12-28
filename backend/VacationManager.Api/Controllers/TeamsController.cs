@@ -47,17 +47,10 @@ public class TeamsController : ControllerBase
         if (user == null)
             return Unauthorized();
 
-        IEnumerable<Team> teams;
-        
         // Managers can see all teams, regular users only see their teams
-        if (user.IsManager)
-        {
-            teams = await _teamRepository.GetAllAsync();
-        }
-        else
-        {
-            teams = await _teamRepository.GetByUserAsync(user.Id);
-        }
+        IEnumerable<Team> teams = user.IsManager
+            ? await _teamRepository.GetAllAsync()
+            : await _teamRepository.GetByUserAsync(user.Id);
 
         return Ok(_mapper.Map<List<TeamDto>>(teams));
     }
