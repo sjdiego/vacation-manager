@@ -33,6 +33,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<IClaimExtractorService, ClaimExtractorService>();
+        services.AddSingleton<IGitVersionService, GitVersionService>();
         
         // Register validation rules
         services.AddScoped<IVacationValidationRule, TeamMembershipValidationRule>();
