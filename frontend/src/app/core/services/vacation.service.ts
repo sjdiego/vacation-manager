@@ -85,11 +85,14 @@ export class VacationService {
 
   private normalizeVacation(vacation: any): VacationDto {
     return {
-      ...vacation,
+      id: vacation.id,
+      userId: vacation.userId,
+      userName: vacation.userName,
       type: this.mapVacationType(vacation.type),
       status: this.mapVacationStatus(vacation.status),
       startDate: new Date(vacation.startDate),
       endDate: new Date(vacation.endDate),
+      notes: vacation.notes,
       createdAt: new Date(vacation.createdAt),
       updatedAt: new Date(vacation.updatedAt)
     };

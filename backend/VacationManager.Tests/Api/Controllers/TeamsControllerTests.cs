@@ -61,9 +61,12 @@ public class TeamsControllerTests
     {
         // Arrange
         var teamId = Guid.NewGuid();
+        var user = new User { Id = Guid.NewGuid(), EntraId = "user123", Email = "user@test.com", DisplayName = "Test User", TeamId = teamId };
         var team = new Team { Id = teamId, Name = "Engineering" };
         var teamDto = new TeamDto { Id = teamId, Name = "Engineering" };
 
+        _authHelper.EnsureTeamMemberOrManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>(), teamId)
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Success()));
         _teamRepository.GetByIdAsync(teamId).Returns(team);
         _mapper.Map<TeamDto>(team).Returns(teamDto);
 
@@ -80,6 +83,10 @@ public class TeamsControllerTests
     {
         // Arrange
         var teamId = Guid.NewGuid();
+        var user = new User { Id = Guid.NewGuid(), EntraId = "user123", Email = "user@test.com", DisplayName = "Test User", TeamId = teamId };
+        
+        _authHelper.EnsureTeamMemberOrManagerAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>(), teamId)
+            .Returns((user, VacationManager.Core.Authorization.AuthorizationResult.Success()));
         _teamRepository.GetByIdAsync(teamId).Returns((Team?)null);
 
         // Act
@@ -104,7 +111,7 @@ public class TeamsControllerTests
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(StatusCodes.Status401Unauthorized, objectResult.StatusCode);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]
@@ -146,7 +153,7 @@ public class TeamsControllerTests
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(StatusCodes.Status401Unauthorized, objectResult.StatusCode);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]
@@ -189,7 +196,7 @@ public class TeamsControllerTests
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status401Unauthorized, objectResult.StatusCode);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]

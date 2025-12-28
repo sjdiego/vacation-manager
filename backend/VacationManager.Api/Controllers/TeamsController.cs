@@ -58,6 +58,10 @@ public class TeamsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<TeamDto>> GetById(Guid id)
     {
+        var (_, authResult) = await _authHelper.EnsureTeamMemberOrManagerAsync(User, id);
+        if (!authResult.IsAuthorized)
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
+
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)
             return NotFound();
@@ -92,7 +96,7 @@ public class TeamsController : ControllerBase
     {
         var (manager, authResult) = await _authHelper.EnsureManagerAsync(User);
         if (!authResult.IsAuthorized)
-            return this.UnauthorizedProblem(authResult.FailureReason ?? "Unauthorized");
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
         var team = new Team
         {
@@ -110,9 +114,9 @@ public class TeamsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<TeamDto>> Update(Guid id, UpdateTeamDto dto)
     {
-        var (manager, authResult) = await _authHelper.EnsureManagerAsync(User);
+        var (_, authResult) = await _authHelper.EnsureManagerAsync(User);
         if (!authResult.IsAuthorized)
-            return this.UnauthorizedProblem(authResult.FailureReason ?? "Unauthorized");
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)
@@ -134,7 +138,7 @@ public class TeamsController : ControllerBase
     {
         var (manager, authResult) = await _authHelper.EnsureManagerAsync(User);
         if (!authResult.IsAuthorized)
-            return this.UnauthorizedProblem(authResult.FailureReason ?? "Unauthorized");
+            return this.ForbiddenProblem(authResult.FailureReason ?? "Forbidden");
 
         var team = await _teamRepository.GetByIdAsync(id);
         if (team == null)
