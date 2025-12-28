@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 using VacationManager.Api.Helpers;
 
 namespace VacationManager.Api.Middleware;
@@ -39,7 +40,7 @@ public class GlobalExceptionHandlerMiddleware
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         var traceId = ProblemDetailsFactory.GetTraceId(context);
-        Models.ProblemDetails problemDetails;
+        ProblemDetails problemDetails;
 
         switch (exception)
         {
@@ -86,7 +87,7 @@ public class GlobalExceptionHandlerMiddleware
         }
 
         context.Response.ContentType = "application/problem+json";
-        context.Response.StatusCode = problemDetails.Status;
+        context.Response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
 
         var options = new JsonSerializerOptions
         {

@@ -38,13 +38,13 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline
 app.UseApplicationSwaggerUI(app.Configuration);
-app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseHttpsRedirection();
 app.UseIpRateLimiting();
 app.UseCors("AllowAngular");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 app.MapControllers();
 
 // Database migration

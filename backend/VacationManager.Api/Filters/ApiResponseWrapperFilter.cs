@@ -27,6 +27,12 @@ public class ApiResponseWrapperFilter : IActionFilter
             return;
         }
 
+        // Skip CreatedAtActionResult and CreatedAtRouteResult to preserve Location header
+        if (context.Result is CreatedAtActionResult or CreatedAtRouteResult)
+        {
+            return;
+        }
+
         // Only wrap successful ObjectResult responses
         if (context.Result is ObjectResult objectResult && 
             objectResult.StatusCode is >= 200 and < 300)
@@ -34,7 +40,7 @@ public class ApiResponseWrapperFilter : IActionFilter
             // Don't wrap if already wrapped, if it's a ProblemDetails, or if value is null
             if (objectResult.Value == null || 
                 objectResult.Value is ApiResponse<object> || 
-                objectResult.Value is Models.ProblemDetails)
+                objectResult.Value is ProblemDetails)
             {
                 return;
             }
