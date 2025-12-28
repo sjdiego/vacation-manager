@@ -27,6 +27,18 @@ public class AuthorizationHelper : IAuthorizationHelper
     }
 
     /// <summary>
+    /// Gets the current user without authorization checks
+    /// </summary>
+    public async Task<User?> GetCurrentUserAsync(ClaimsPrincipal claimsPrincipal)
+    {
+        var userEntraId = _claimExtractor.GetEntraId(claimsPrincipal);
+        if (string.IsNullOrEmpty(userEntraId))
+            return null;
+
+        return await _userRepository.GetByEntraIdAsync(userEntraId);
+    }
+
+    /// <summary>
     /// Gets the current user from claims and checks authorization
     /// </summary>
     public async Task<(User? user, AuthorizationResult authResult)> AuthorizeAsync(

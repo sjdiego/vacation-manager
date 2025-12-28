@@ -38,9 +38,12 @@ public class TeamsControllerTests
     public async Task GetAll_ReturnsAllTeams()
     {
         // Arrange
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId, EntraId = "user123", Email = "user@test.com", DisplayName = "Test User", IsManager = true };
         var teams = new List<Team> { new Team { Id = Guid.NewGuid(), Name = "Engineering" }, new Team { Id = Guid.NewGuid(), Name = "Marketing" } };
         var teamDtos = new List<TeamDto> { new TeamDto(), new TeamDto() };
 
+        _authHelper.GetCurrentUserAsync(Arg.Any<System.Security.Claims.ClaimsPrincipal>()).Returns(user);
         _teamRepository.GetAllAsync().Returns(teams);
         _mapper.Map<List<TeamDto>>(teams).Returns(teamDtos);
 

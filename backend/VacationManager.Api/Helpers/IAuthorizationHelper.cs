@@ -9,6 +9,7 @@ namespace VacationManager.Api.Helpers;
 /// </summary>
 public interface IAuthorizationHelper
 {
+    Task<User?> GetCurrentUserAsync(ClaimsPrincipal claimsPrincipal);
     Task<(User? user, AuthorizationResult result)> AuthorizeUserAsync(ClaimsPrincipal claimsPrincipal);
     Task<(User? user, AuthorizationResult result)> AuthorizeTeamOperationAsync(ClaimsPrincipal claimsPrincipal);
     Task<(User? user, AuthorizationResult result)> AuthorizeManagerOperationAsync(ClaimsPrincipal claimsPrincipal);
