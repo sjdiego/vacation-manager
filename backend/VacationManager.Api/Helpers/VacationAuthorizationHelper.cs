@@ -1,3 +1,4 @@
+using VacationManager.Api.Services;
 using VacationManager.Core.Authorization;
 using VacationManager.Core.Entities;
 using VacationManager.Core.Interfaces;
@@ -9,7 +10,7 @@ namespace VacationManager.Api.Helpers;
 /// <summary>
 /// Helper service to simplify authorization checks in controllers
 /// </summary>
-public class VacationAuthorizationHelper
+public class VacationAuthorizationHelper : IVacationAuthorizationHelper
 {
     private readonly IUserRepository _userRepository;
     private readonly AuthorizationService _authorizationService;
@@ -62,7 +63,7 @@ public class VacationAuthorizationHelper
     /// <summary>
     /// Simplified authorization for basic user operations (just checks user exists)
     /// </summary>
-    public async Task<(User? user, AuthorizationResult authResult)> AuthorizeUserAsync(
+    public async Task<(User? user, AuthorizationResult result)> AuthorizeUserAsync(
         ClaimsPrincipal claimsPrincipal)
     {
         return await AuthorizeAsync(
@@ -74,7 +75,7 @@ public class VacationAuthorizationHelper
     /// <summary>
     /// Simplified authorization for team operations
     /// </summary>
-    public async Task<(User? user, AuthorizationResult authResult)> AuthorizeTeamOperationAsync(
+    public async Task<(User? user, AuthorizationResult result)> AuthorizeTeamOperationAsync(
         ClaimsPrincipal claimsPrincipal)
     {
         return await AuthorizeAsync(
@@ -86,7 +87,7 @@ public class VacationAuthorizationHelper
     /// <summary>
     /// Simplified authorization for manager operations
     /// </summary>
-    public async Task<(User? user, AuthorizationResult authResult)> AuthorizeManagerOperationAsync(
+    public async Task<(User? user, AuthorizationResult result)> AuthorizeManagerOperationAsync(
         ClaimsPrincipal claimsPrincipal)
     {
         return await AuthorizeAsync(

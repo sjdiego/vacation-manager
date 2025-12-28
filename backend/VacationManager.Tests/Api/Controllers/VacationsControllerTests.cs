@@ -20,7 +20,7 @@ public class VacationsControllerTests
     private readonly IMapper _mapper;
     private readonly ILogger<VacationsController> _logger;
     private readonly IVacationValidationService _validationService;
-    private readonly VacationAuthorizationHelper _authHelper;
+    private readonly IVacationAuthorizationHelper _authHelper;
     private readonly VacationsController _controller;
 
     public VacationsControllerTests()
@@ -30,7 +30,7 @@ public class VacationsControllerTests
         _mapper = Substitute.For<IMapper>();
         _logger = Substitute.For<ILogger<VacationsController>>();
         _validationService = Substitute.For<IVacationValidationService>();
-        _authHelper = Substitute.For<VacationAuthorizationHelper>();
+        _authHelper = Substitute.For<IVacationAuthorizationHelper>();
         _controller = new VacationsController(
             _vacationRepository,
             _userRepository,
@@ -130,7 +130,7 @@ public class VacationsControllerTests
         var result = await _controller.Create(createDto);
 
         // Assert
-        Assert.IsType<ObjectResult>(result.Result);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
         await _vacationRepository.DidNotReceive().CreateAsync(Arg.Any<Vacation>());
     }
 

@@ -12,6 +12,7 @@ using VacationManager.Core.Validation;
 using VacationManager.Core.Validation.Rules;
 using VacationManager.Data.Repositories;
 using VacationManager.Api.Services;
+using VacationManager.Api.Helpers;
 using VacationManager.Api.Configuration;
 
 namespace VacationManager.Api.Extensions;
@@ -42,7 +43,7 @@ public static class ServiceCollectionExtensions
         
         // Register authorization service
         services.AddScoped<VacationManager.Core.Authorization.AuthorizationService>();
-        services.AddScoped<VacationAuthorizationHelper>();
+        services.AddScoped<IVacationAuthorizationHelper, VacationAuthorizationHelper>();
         
         return services;
     }
