@@ -75,7 +75,7 @@ export class ErrorHandlerService {
       case 0:
         return 'Unable to connect to the server. Please check your network connection.';
       case 400:
-        return error.error?.message || error.error?.detail || 'Bad request. Please check your input.';
+        return 'Bad request. Please check your input.';
       case 401:
         return 'Unauthorized. Please log in again.';
       case 403:
@@ -83,9 +83,9 @@ export class ErrorHandlerService {
       case 404:
         return 'Resource not found.';
       case 409:
-        return error.error?.message || error.error?.detail || 'Conflict. The resource may already exist.';
+        return 'Conflict. The resource may already exist.';
       case 422:
-        return error.error?.message || error.error?.detail || 'Validation error. Please check your input.';
+        return 'Validation error. Please check your input.';
       case 500:
         return 'Internal server error. Please try again later.';
       case 503:

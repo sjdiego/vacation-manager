@@ -69,7 +69,10 @@ export class ApiService {
       return response as T;
     }
     
-    if (response.success && response.data !== undefined) {
+    // Check if response has success property to determine if it's wrapped
+    const isWrapped = typeof response === 'object' && 'success' in response;
+    
+    if (isWrapped && response.success === true && response.data !== undefined) {
       return response.data;
     }
     

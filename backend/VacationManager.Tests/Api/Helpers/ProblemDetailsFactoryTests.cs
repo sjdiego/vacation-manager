@@ -225,7 +225,7 @@ public class ProblemDetailsFactoryTests
     public void GetTraceId_WithCurrentActivity_ReturnsActivityId()
     {
         // Arrange
-        var activity = new System.Diagnostics.Activity("test");
+        using var activity = new System.Diagnostics.Activity("test");
         activity.Start();
 
         // Act
