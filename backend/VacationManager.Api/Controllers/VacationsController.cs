@@ -200,7 +200,7 @@ public class VacationsController : ControllerBase
 
         var user = await _userRepository.GetByIdAsync(vacation.UserId);
         if (user?.TeamId != manager.TeamId)
-            return this.ForbiddenProblem("Can only approve vacations for team members");
+            return this.ForbiddenProblem("Only vacations for team members can be approved");
 
         vacation.Status = dto.Approved ? VacationStatus.Approved : VacationStatus.Rejected;
         vacation.ApprovedBy = manager.Id;
