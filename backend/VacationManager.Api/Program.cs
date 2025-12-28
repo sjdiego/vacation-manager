@@ -24,6 +24,7 @@ builder.Services.AddApplicationRateLimiting(builder.Configuration);
 builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddControllers(options =>
 {
+    options.Filters.Add<FluentValidationFilter>();
     options.Filters.Add<ValidationFilter>();
     options.Filters.Add<ApiResponseWrapperFilter>();
 })

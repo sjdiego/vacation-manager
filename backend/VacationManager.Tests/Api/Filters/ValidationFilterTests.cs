@@ -69,6 +69,25 @@ public class ValidationFilterTests
     }
 
     [Fact]
+    public async Task ValidationFilter_WithInvalidModelState_ReturnsProblemDetails()
+    {
+        // Arrange
+        _context.ModelState.AddModelError("Email", "Email is required");
+
+        // Act
+        await _filter.OnActionExecutionAsync(_context, _nextDelegate);
+
+        // Assert
+        var badRequestResult = (BadRequestObjectResult)_context.Result!;
+        var problemDetails = Assert.IsType<ProblemDetails>(badRequestResult.Value);
+        
+        Assert.Equal(StatusCodes.Status400BadRequest, problemDetails.Status);
+        Assert.Equal("Validation Failed", problemDetails.Title);
+        Assert.NotNull(problemDetails.Extensions);
+        Assert.True(problemDetails.Extensions!.ContainsKey("errors"));
+    }
+
+    [Fact]
     public async Task ValidationFilter_WithInvalidModelState_IncludesErrorDetails()
     {
         // Arrange
@@ -80,15 +99,34 @@ public class ValidationFilterTests
 
         // Assert
         var badRequestResult = (BadRequestObjectResult)_context.Result!;
-        var responseValue = badRequestResult.Value;
+        var problemDetails = Assert.IsType<ProblemDetails>(badRequestResult.Value);
         
-        Assert.NotNull(responseValue);
-        var errors = responseValue!.GetType().GetProperty("errors")?.GetValue(responseValue);
+        Assert.NotNull(problemDetails.Extensions);
+        var errors = problemDetails.Extensions!["errors"] as Dictionary<string, string[]>;
         Assert.NotNull(errors);
+        Assert.True(errors!.ContainsKey("Email"));
+        Assert.Equal(2, errors["Email"].Length);
     }
 
     [Fact]
-    public async Task ValidationFilter_WithInvalidModelState_IncludesMessage()
+    public async Task ValidationFilter_WithInvalidModelState_IncludesInstance()
+    {
+        // Arrange
+        _context.ModelState.AddModelError("Field", "Error message");
+        _context.HttpContext.Request.Path = "/api/v1/vacations";
+
+        // Act
+        await _filter.OnActionExecutionAsync(_context, _nextDelegate);
+
+        // Assert
+        var badRequestResult = (BadRequestObjectResult)_context.Result!;
+        var problemDetails = Assert.IsType<ProblemDetails>(badRequestResult.Value);
+        
+        Assert.Equal("/api/v1/vacations", problemDetails.Instance);
+    }
+
+    [Fact]
+    public async Task ValidationFilter_WithInvalidModelState_ReturnsCorrectType()
     {
         // Arrange
         _context.ModelState.AddModelError("Field", "Error message");
@@ -98,33 +136,13 @@ public class ValidationFilterTests
 
         // Assert
         var badRequestResult = (BadRequestObjectResult)_context.Result!;
-        var responseValue = badRequestResult.Value;
+        var problemDetails = Assert.IsType<ProblemDetails>(badRequestResult.Value);
         
-        var message = responseValue!.GetType().GetProperty("message")?.GetValue(responseValue);
-        Assert.Equal("Validation failed", message);
+        Assert.Equal("https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1", problemDetails.Type);
+        Assert.Equal("One or more validation errors occurred.", problemDetails.Detail);
     }
 
-    [Fact]
-    public async Task ValidationFilter_WithInvalidModelState_IncludesTimestamp()
-    {
-        // Arrange
-        _context.ModelState.AddModelError("Field", "Error");
-        var beforeFilter = DateTime.UtcNow;
-
-        // Act
-        await _filter.OnActionExecutionAsync(_context, _nextDelegate);
-
-        // Assert
-        var badRequestResult = (BadRequestObjectResult)_context.Result!;
-        var responseValue = badRequestResult.Value;
-        var timestamp = responseValue!.GetType().GetProperty("timestamp")?.GetValue(responseValue);
-        
-        Assert.NotNull(timestamp);
-        Assert.IsType<DateTime>(timestamp);
-        Assert.True((DateTime)timestamp >= beforeFilter);
-    }
-
-    [Fact]
+[Fact]
     public async Task ValidationFilter_WithMultipleFieldErrors_ReturnsAllErrors()
     {
         // Arrange
@@ -139,13 +157,11 @@ public class ValidationFilterTests
         Assert.NotNull(_context.Result);
         Assert.IsType<BadRequestObjectResult>(_context.Result);
         var badRequestResult = (BadRequestObjectResult)_context.Result;
-        var responseValue = badRequestResult.Value;
+        var problemDetails = Assert.IsType<ProblemDetails>(badRequestResult.Value);
         
-        var errors = responseValue!.GetType().GetProperty("errors")?.GetValue(responseValue);
+        var errors = problemDetails.Extensions!["errors"] as Dictionary<string, string[]>;
         Assert.NotNull(errors);
-        
-        var errorDict = (Dictionary<string, string[]>)errors!;
-        Assert.Equal(3, errorDict.Count);
+        Assert.Equal(3, errors!.Count);
     }
 
     [Fact]
@@ -174,11 +190,11 @@ public class ValidationFilterTests
 
         // Assert
         var badRequestResult = (BadRequestObjectResult)_context.Result!;
-        var responseValue = badRequestResult.Value;
-        var errors = (Dictionary<string, string[]>)responseValue!.GetType().GetProperty("errors")?.GetValue(responseValue)!;
+        var problemDetails = Assert.IsType<ProblemDetails>(badRequestResult.Value);
+        var errors = problemDetails.Extensions!["errors"] as Dictionary<string, string[]>;
         
         Assert.NotNull(errors);
-        Assert.Single(errors);
+        Assert.Single(errors!);
         Assert.Equal(2, errors["Email"].Length);
     }
 

@@ -1,8 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using VacationManager.Api.Helpers;
 
 namespace VacationManager.Api.Filters;
 
+/// <summary>
+/// Action filter that validates ModelState and returns Problem Details for validation errors.
+/// Handles validation errors from Data Annotations and model binding.
+/// </summary>
 public class ValidationFilter : IAsyncActionFilter
 {
     public async Task OnActionExecutionAsync(
@@ -20,14 +25,20 @@ public class ValidationFilter : IAsyncActionFilter
                         .ToArray() ?? Array.Empty<string>()
                 );
 
-            var response = new
+            var traceId = ProblemDetailsFactory.GetTraceId(context.HttpContext);
+            var extensions = new Dictionary<string, object>
             {
-                message = "Validation failed",
-                errors = errors,
-                timestamp = DateTime.UtcNow
+                ["errors"] = errors
             };
 
-            context.Result = new BadRequestObjectResult(response);
+            var problemDetails = ProblemDetailsFactory.CreateBadRequest(
+                "One or more validation errors occurred.",
+                title: "Validation Failed",
+                instance: context.HttpContext.Request.Path,
+                extensions: extensions,
+                traceId: traceId);
+
+            context.Result = new BadRequestObjectResult(problemDetails);
             return;
         }
 
