@@ -56,10 +56,10 @@ This repo deploys via GitHub Actions:
 
 Configure these under **Settings → Environments → production → Variables**:
 
-- `FRONTEND_API_URL` = `https://vacation-manager-api.diego.cat/api`
-- `FRONTEND_REDIRECT_URI` = `https://vacation-manager.diego.cat/`
+- `FRONTEND_API_URL` = `https://vacation-manager-api.azurewebsites.net/api`
+- `FRONTEND_REDIRECT_URI` = `https://thankful-pond-0eb655f03.4.azurestaticapps.net//`
 - `AZURE_RESOURCE_GROUP` = `vacation-manager-rg`
-- `BACKEND_CORS_ALLOWED_ORIGINS` = `https://vacation-manager.diego.cat`
+- `BACKEND_CORS_ALLOWED_ORIGINS` = `https://thankful-pond-0eb655f03.4.azurestaticapps.net`
   - Comma-separated if multiple, e.g. `https://a.com,https://b.com`
 
 ### Required GitHub Environment secrets (production)
@@ -77,14 +77,6 @@ The API reads allowed origins from configuration:
 - `Cors:AllowedOrigins` (App Service app settings: `Cors__AllowedOrigins__0`, `Cors__AllowedOrigins__1`, ...)
 
 In production, if no origins are configured, CORS will be effectively disabled (safe default).
-
-## Azure Front Door (AFD)
-
-Front Door is configured with two endpoints and custom domains:
-- Web (frontend): `https://vacation-manager.diego.cat`
-- API: `https://vacation-manager-api.diego.cat`
-
-Routes are configured to forward requests to the corresponding origins (Static Web Apps / App Service).
 
 ## License
 
